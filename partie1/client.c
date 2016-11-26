@@ -26,7 +26,7 @@ void afficherCommandes(){
 	printf("\nCommandes disponibles : \n");
 	printf("----------------------- \n\n");
 	printf("GETLIST \n - Retourne la liste des fichiers telechargeables du serveur \n\n");
-	printf("GET <nomFichier> [repertoireLocal] \n - Telecharge le fichier nomFichier dans repertoireLocal (./ si vide) \n\n");
+	printf("GET <nomFichier> [-DIRL repertoireLocal] \n - Telecharge le fichier nomFichier dans repertoireLocal (./ si vide) \n\n");
 	printf("QUIT \n - Quitte le programme \n\n");
 }
 
@@ -82,7 +82,7 @@ int main(int argc, char **argv){
 			return EXIT_FAILURE;
 		}
 		sizeRcvTotal += sizeRcv;
-	}while(sizeRcvTotal < sizeof(int));
+	}while(sizeRcvTotal < sizeof(msg.cmd));
 
 	if(msg.cmd != BEGIN){
 		printf("Connexion refusee, veuillez reessayer plus tard \n");
@@ -93,6 +93,8 @@ int main(int argc, char **argv){
 	printf("Connexion acceptee \n");
 
 	char cmd[SIZE_BUF_CMD];
+	int sizeSendTotal = 0;
+	int sizeSend;
 
 	while(1){
 
@@ -105,23 +107,73 @@ int main(int argc, char **argv){
 		cmd[strlen(cmd) - 1] = '\0';
 
 		if(strcmp(cmd, "HELP") == 0){
+
 			afficherCommandes();
+
 		}
 		else if(strcmp(cmd, "QUIT") == 0){
+
 			break;
+
 		}
 		else if(strcmp(cmd, "GETLIST") == 0){
-			if(send(localSocket, cmd, strlen(cmd), 0) == -1){
-				perror("Erreur send() ");
-				continue;
-			}
+
+			msg.cmd = GETLIST;
+
+			do{
+				if((sizeSend = send(localSocket, cmd, strlen(cmd), 0)) == -1){
+					perror("Erreur send() ");
+					continue;
+				}
+				sizeSendTotal += sizeSend;
+			}while(sizeSendTotal < sizeof(msg.cmd));
+
+			do{
+				if((sizeRcv = recv(localSocket, &msg, sizeof(msg), 0)) == -1){
+					perror("Erreur recv() ");
+					close(localSocket);
+					return EXIT_FAILURE;
+				}
+				sizeRcvTotal += sizeRcv;
+			}while(sizeRcvTotal < sizeof(msg.cmd));
 
 		}
 		else if(strspn(cmd, "GET") == 3){
 
+			msg.cmd = GET;
+
+			tableauNomsFichiers = strtok(cmd, " ");
+
+			char DIRLocal[256] = "./";
+
+			while(tableauNomsFichiers != NULL){
+				if(strcmp(tableauNomsFichiers, "-DIRL") == 0){
+					tableauNomsFichiers = strtok(NULL, " ");
+					if(tableauNomsFichiers != NULL){
+						strcpy(DIRLocal, tableauNomsFichiers);
+					}
+					else{
+						printf("[-DIRL repertoireLocal] \n");
+						continue;
+					}
+				}
+
+				tableauNomsFichiers = strtok(NULL, " ");
+			}
+
+			do{
+				if((sizeSend = send(localSocket, cmd, strlen(cmd), 0)) == -1){
+					perror("Erreur send() ");
+					continue;
+				}
+				sizeSendTotal += sizeSend;
+			}while(sizeSendTotal < sizeof(msg.cmd));
+
 		}
 		else{
+
 			printf("Commande inconnue \n");
+
 		}
 
 	}

@@ -29,9 +29,9 @@
 #define BEGIN 0
 
 struct msg {
-  int cmd;
-  int content_size;
-  char content[256];
+	int cmd;
+	int content_size;
+	char content[256];
 };
 
 
@@ -40,30 +40,30 @@ struct msg {
  ***********/
 int main(int argc, char* argv[]) {
 
-  int go = 1;
-  char r_buffer[256];
+	int go = 1;
+	char r_buffer[256];
 
   /**********************************************************************************
    ********************    MISE EN PLACE DE LA COMMUNICATION     ********************
    **********************************************************************************/
-  
+	
   // Creation de la boite publique
-  int fd_brPublique = socket(PF_INET, SOCK_STREAM, 0);
-  if(fd_brPublique == -1) {
-    perror("socket ");
-    exit(EXIT_FAILURE);
-  }
+	int fd_brPublique = socket(PF_INET, SOCK_STREAM, 0);
+	if(fd_brPublique == -1) {
+		perror("socket ");
+		exit(EXIT_FAILURE);
+	}
 
-  struct sockaddr_in brPublique;
-  brPublique.sin_family = AF_INET;
-  brPublique.sin_addr.s_addr = INADDR_ANY;
+	struct sockaddr_in brPublique;
+	brPublique.sin_family = AF_INET;
+	brPublique.sin_addr.s_addr = INADDR_ANY;
   brPublique.sin_port = 0; // num de port choisi par le systeme
 
   // Liaison de la socket et de la struct 
   int ret_bind = bind(fd_brPublique, (struct sockaddr *) &brPublique, sizeof(brPublique));
   if(ret_bind == -1) {
-    perror("bind ");
-    exit(EXIT_FAILURE);
+	perror("bind ");
+	exit(EXIT_FAILURE);
   }
 
   // Afficher le numero de port pour les clients
@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
   // Creation d'une file d'attente des connexions
   int ret_listen = listen(fd_brPublique, LG_FILE_ATTENTE);
   if(ret_listen == -1) {
-    perror("listen ");
-    exit(EXIT_FAILURE);
+	perror("listen ");
+	exit(EXIT_FAILURE);
   }
 
   /****************************************************************
@@ -94,76 +94,76 @@ int main(int argc, char* argv[]) {
   
   while(go) {
 
-    // Acceptation d'une connexion de client
-    fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) &brCv, &lgbrCv);
-    
-    // Augmente le nb de clients apres acceptation
-    nb_clients++;
-  
-    if(fd_circuitV == -1) {
-      perror("accept ");
-    }
-    // Traitement normal du client
-    else { 
-      printf("Un client vient de se connecter. FD = %d\n", fd_circuitV);
-      online = 1;
-
-      // Envoi message au client pour commencer les transactions
-      struct msg m_send;
-      m_send.cmd = BEGIN;
-      m_send.content_size = 0;
-	  
-      while (ret_send < sizeof(m_send)) {
+	// Acceptation d'une connexion de client
+	fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) &brCv, &lgbrCv);
 	
-	ret_send += send(fd_circuitV, &m_send + ret_send, sizeof(m_send) - ret_send, 0);
-	if(ret_send == -1) {
-	  perror("send begin ");
-	}
-      }
-      
-      // BOUCLE DE RECEPTION DES COMMANDES
-      while(online) {
-	ret_recv = recv(fd_circuitV, r_buffer, sizeof(r_buffer), 0);
-
-	if(ret_recv == -1) {
-	  perror("recv cmd ");
+	// Augmente le nb de clients apres acceptation
+	nb_clients++;
 	
+	if(fd_circuitV == -1) {
+		perror("accept ");
 	}
+	// Traitement normal du client
+	else { 
+		printf("Un client vient de se connecter. FD = %d\n", fd_circuitV);
+		online = 1;
+
+	  // Envoi message au client pour commencer les transactions
+		struct msg m_send;
+		m_send.cmd = BEGIN;
+		m_send.content_size = 0;
+		
+		while (ret_send < sizeof(m_send)) {
+			
+			ret_send += send(fd_circuitV, &m_send + ret_send, sizeof(m_send) - ret_send, 0);
+			if(ret_send == -1) {
+				perror("send begin ");
+			}
+		}
+		
+	  // BOUCLE DE RECEPTION DES COMMANDES
+		while(online) {
+			ret_recv = recv(fd_circuitV, r_buffer, sizeof(r_buffer), 0);
+
+			if(ret_recv == -1) {
+				perror("recv cmd ");
+				
+			}
 	// Si le client se deconnecte intempestivement
-	else if(ret_recv == 0) {   
-	  ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-	  if(ret_shutdown == -1) perror("shutdown disconnect ");
+			else if(ret_recv == 0) {   
+				ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
+				if(ret_shutdown == -1) perror("shutdown disconnect ");
 
 	  // Ferme le descripteur de la socket
-	  ret_close = close(fd_circuitV);
-	  if(ret_close == -1) perror("close ");
-	  
-	  nb_clients--;
-	  online = 0;
-	}
-	else {
-	  r_buffer[ret_recv] = '\0';
-	  
-	  char* cmd_buffer = strdup(r_buffer);
-	  if(cmd_buffer == NULL) perror("strdup ");
+				ret_close = close(fd_circuitV);
+				if(ret_close == -1) perror("close ");
+				
+				nb_clients--;
+				online = 0;
+			}
+			else {
+				r_buffer[ret_recv] = '\0';
+				
+				char* cmd_buffer = strdup(r_buffer);
+				if(cmd_buffer == NULL) perror("strdup ");
 
-	  char delim = ' ';
-	  char* token = strsep(&cmd_buffer, &delim);
+				char delim = ' ';
+				char* token = strsep(&cmd_buffer, &delim);
 
-	  printf("Cmd received : %s\n", token);
-	  
-	  if(strcmp(token, "GETLIST") == 0) {
-	    /* int fd_storage_dir = open(PATH_TO_STORAGE_DIR, ) */
-	  }
-	  else {
-	    
-	  }
+				printf("Cmd received : %s\n", token);
+				
+				if(strcmp(token, "GETLIST") == 0) {
+		/* int fd_storage_dir = open(PATH_TO_STORAGE_DIR, ) */
+				}
+				else {
+					
+				}
+			}
+			
+		}
+		
 	}
 	
-      }
-      
-    }
-    
   }
   
   // Ferme la communication entre sockets
