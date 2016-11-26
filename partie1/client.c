@@ -24,9 +24,10 @@ struct msg{
 
 void afficherCommandes(){
 	printf("\nCommandes disponibles : \n");
-	printf("GETLIST : retourne la liste des fichiers telechargeables du serveur \n");
-	printf("GET <nomFichier> [repertoireLocal] : telecharge le fichier nomFichier dans repertoireLocal (./ si vide) \n");
-	printf("QUIT : quitte le programme \n");
+	printf("----------------------- \n\n");
+	printf("GETLIST \n - Retourne la liste des fichiers telechargeables du serveur \n\n");
+	printf("GET <nomFichier> [repertoireLocal] \n - Telecharge le fichier nomFichier dans repertoireLocal (./ si vide) \n\n");
+	printf("QUIT \n - Quitte le programme \n\n");
 }
 
 int main(int argc, char **argv){
@@ -75,15 +76,15 @@ int main(int argc, char **argv){
 	int sizeRcvTotal = 0;
 	int sizeRcv;
 	do{
-		if((sizeRcv = recv(localSocket, msg + sizeRcvTotal, sizeof(msg), 0)) == -1){
+		if((sizeRcv = recv(localSocket, &msg, sizeof(msg), 0)) == -1){
 			perror("Erreur recv() ");
 			close(localSocket);
 			return EXIT_FAILURE;
 		}
 		sizeRcvTotal += sizeRcv;
-	}while(sizeRcvTotal < (sizeof(int) * 2));
+	}while(sizeRcvTotal < sizeof(int));
 
-	if(strcmp(responseAccept, "BEGIN") != 0){
+	if(msg.cmd != BEGIN){
 		printf("Connexion refusee, veuillez reessayer plus tard \n");
 		close(localSocket);
 		return EXIT_FAILURE;
@@ -97,7 +98,7 @@ int main(int argc, char **argv){
 
 		memset(cmd, 0, sizeof(cmd));
 
-		printf("\nEntrez une commande (help pour avoir la liste) : \n");
+		printf("\nEntrez une commande (HELP pour avoir la liste) : \n");
 
 		fgets(cmd, sizeof(cmd), stdin);
 		if(cmd[0] == '\n') break;
