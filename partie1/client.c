@@ -61,10 +61,10 @@ int main(int argc, char **argv){
       return EXIT_FAILURE;
     }
     sizeRcvTotal += sizeRcv;
-    printf("size rcv total = %d\n", sizeRcvTotal);
+    //printf("size rcv total = %d\n", sizeRcvTotal);
   } while(sizeRcvTotal < sizeof(msg.msg_size));
 
-  printf("msg_size = %lu\n", sizeof(msg.msg_size));
+  //printf("msg_size = %d \n", msg.msg_size);
   
   while(sizeRcvTotal < msg.msg_size) {
     if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
@@ -73,7 +73,6 @@ int main(int argc, char **argv){
       return EXIT_FAILURE;
     }
     sizeRcvTotal += sizeRcv;
-    
   } 
   
   if(msg.cmd != BEGIN){
@@ -104,7 +103,9 @@ int main(int argc, char **argv){
 
     }
     else if(strcmp(cmd, "QUIT") == 0){
-
+    	printf("\nAu revoir :)\n");
+    	printf("------------\n");
+    	printf("\n");
       break;
 
     }
@@ -130,10 +131,10 @@ int main(int argc, char **argv){
 				  return EXIT_FAILURE;
 				}
 				sizeRcvTotal += sizeRcv;
-				printf("size rcv total = %d\n", sizeRcvTotal);
+				//printf("size rcv total = %d\n", sizeRcvTotal);
       } while(sizeRcvTotal < sizeof(msg.msg_size));
 
-      printf("msg_size = %d", msg.msg_size);
+      //printf("msg_size = %d", msg.msg_size);
       
       while(sizeRcvTotal < msg.msg_size) {
 				if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
@@ -145,11 +146,12 @@ int main(int argc, char **argv){
       } 
 
       // AFFICHAGE DU RESULTAT
-      printf("\n");
+      printf("\nListe des fichiers du serveur : \n");
+      printf("-------------------------------\n\n");
       for(int i = 0; i < msg.infos_contenu.nb_fichier; i++) {
 				printf("%s\n", (msg.content.file_infos[i]));
       }
-
+      printf("\n");
       
     }
     else if(strspn(cmd, "GET") == 3){

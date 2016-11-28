@@ -77,13 +77,13 @@ int main(int argc, char* argv[]) {
       online = 1;
       
       // Envoi message au client pour commencer les transactions
-      m_send.msg_size = sizeof(BEGIN);
+      m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd);
       m_send.cmd = BEGIN;
       
       // Tant que tout le msg n'est pas envoye, on boucle
-      while (s_total_size < sizeof(m_send)) {
+      while (s_total_size < sizeof(m_send.msg_size)) {
 			
-      	ret_send = send(fd_circuitV, &m_send + s_total_size, sizeof(m_send) - s_total_size, 0);
+      	ret_send = send(fd_circuitV, &m_send + s_total_size, m_send.msg_size - s_total_size, 0);
       	if(ret_send == -1) {
       	  perror("send begin ");
       	}
@@ -167,7 +167,11 @@ int main(int argc, char* argv[]) {
             m_send.infos_contenu.nb_fichier = 0;
             listdir(PATH_TO_STORAGE_DIR, &m_send);
         	  //m_send.content.file_list = *list;
-        	  m_send.msg_size = sizeof(m_send);
+        	  m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + sizeof(m_send.infos_contenu) + (sizeof(m_send.content.file_infos[0]) * m_send.infos_contenu.nb_fichier);
+
+            printf("sizeof(msg) : %d \n", m_send.msg_size);
+            printf("sizeof(m_send.content.file_infos[0]) : %lu \n", sizeof(m_send.content.file_infos[0]));
+            printf("m_send.infos_contenu.nb_fichier : %d \n", m_send.infos_contenu.nb_fichier);
 
             printf("%p : adr msg \n", &m_send);
             printf("%p : adr msg_size \n", &m_send.msg_size);
@@ -184,9 +188,9 @@ int main(int argc, char* argv[]) {
             printf("%p : adr file_infos 1 \n", &m_send.content.file_infos[1]);
 
         	  s_total_size = 0;
-        	  while (s_total_size < sizeof(m_send)) {
+        	  while (s_total_size < sizeof(m_send.msg_size)) {
         			
-        	    ret_send = send(fd_circuitV, &m_send + s_total_size, sizeof(m_send) - s_total_size, 0);
+        	    ret_send = send(fd_circuitV, &m_send + s_total_size, m_send.msg_size - s_total_size, 0);
         	    if(ret_send == -1) {
         	      perror("send begin ");
         	    }
@@ -280,6 +284,8 @@ void listdir(char* path_to_dir, struct msg *msg) {
     numFichier++;
   }
 
+  strcpy(msg->content.file_infos[numFichier], "\0");
+
   //struct f_list* fl = malloc(sizeof(*fl));
   //fl->file_nb = numFichier;
  // fl->list = file_list;
@@ -369,7 +375,7 @@ char* lstattoa(char* path_to_file, char* name){
   else strcpy(file_infos, strcat(file_infos, file_size));
 
    // add space
-  strcpy(file_infos, strcat(file_infos, " "));
+  strcpy(file_infos, strcat(file_infos, "\t"));
 
   // add name
   strcpy(file_infos, strcat(file_infos, name));
