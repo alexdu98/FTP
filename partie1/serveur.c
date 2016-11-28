@@ -83,119 +83,136 @@ int main(int argc, char* argv[]) {
       // Tant que tout le msg n'est pas envoye, on boucle
       while (s_total_size < sizeof(m_send)) {
 			
-	ret_send = send(fd_circuitV, &m_send, sizeof(m_send) - s_total_size, 0);
-	if(ret_send == -1) {
-	  perror("send begin ");
-	}
-	// Si le client se deconnecte intempestivement
-	else if(ret_send == 0) {   
-	  ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-	  if(ret_shutdown == -1) perror("shutdown disconnect ");
+      	ret_send = send(fd_circuitV, &m_send + s_total_size, sizeof(m_send) - s_total_size, 0);
+      	if(ret_send == -1) {
+      	  perror("send begin ");
+      	}
+      	// Si le client se deconnecte intempestivement
+      	else if(ret_send == 0) {   
+      	  ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
+      	  if(ret_shutdown == -1) perror("shutdown disconnect ");
 
-	  // Ferme le descripteur de la socket
-	  ret_close = close(fd_circuitV);
-	  if(ret_close == -1) perror("close ");
-				
-	  nb_clients--;
-	  online = 0;
-	}
+      	  // Ferme le descripteur de la socket
+      	  ret_close = close(fd_circuitV);
+      	  if(ret_close == -1) perror("close ");
+      				
+      	  nb_clients--;
+      	  online = 0;
+      	}
 
-	s_total_size += ret_send;
+      	s_total_size += ret_send;
       }
       
       // BOUCLE DE RECEPTION DES COMMANDES
       while(online) {
 
-	// Reception des 4 premiers octets contenant la taille du msg
-	while (r_total_size < sizeof(m_send.msg_size)) {
-	  ret_recv = recv(fd_circuitV, &m_recv, sizeof(m_recv) - r_total_size, 0);
+      	// Reception des 4 premiers octets contenant la taille du msg
+      	while (r_total_size < sizeof(m_send.msg_size)) {
+      	  ret_recv = recv(fd_circuitV, &m_recv + r_total_size, sizeof(m_recv) - r_total_size, 0);
 
-	  if(ret_recv == -1) {
-	    perror("recv cmd ");
-	    exit(EXIT_FAILURE);
-	  }
-	  // Si le client se deconnecte intempestivement
-	  else if(ret_recv == 0) {   
-	    ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-	    if(ret_shutdown == -1) perror("shutdown disconnect ");
+      	  if(ret_recv == -1) {
+      	    perror("recv cmd ");
+      	    exit(EXIT_FAILURE);
+      	  }
+      	  // Si le client se deconnecte intempestivement
+      	  else if(ret_recv == 0) {   
+      	    ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
+      	    if(ret_shutdown == -1) perror("shutdown disconnect ");
 
-	    // Ferme le descripteur de la socket
-	    ret_close = close(fd_circuitV);
-	    if(ret_close == -1) perror("close ");
-				
-	    nb_clients--;
-	    online = 0;
-	  }
-	  
-	  r_total_size += ret_recv;
-	}
+      	    // Ferme le descripteur de la socket
+      	    ret_close = close(fd_circuitV);
+      	    if(ret_close == -1) perror("close ");
+      				
+      	    nb_clients--;
+      	    online = 0;
+      	  }
+      	  
+      	  r_total_size += ret_recv;
+      	}
 
 
-	// Taille du msg recu, maintenant reception du reste
-	while(r_total_size < m_recv.msg_size) {
-	  ret_recv = recv(fd_circuitV, &m_recv, sizeof(m_recv) - r_total_size, 0);
+      	// Taille du msg recu, maintenant reception du reste
+      	while(r_total_size < m_recv.msg_size) {
+      	  ret_recv = recv(fd_circuitV, &m_recv + r_total_size, sizeof(m_recv) - r_total_size, 0);
 
-	  if(ret_recv == -1) {
-	    perror("recv cmd ");
-	    exit(EXIT_FAILURE);
-	  }
-	  // Si le client se deconnecte intempestivement
-	  else if(ret_recv == 0) {   
-	    ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-	    if(ret_shutdown == -1) perror("shutdown disconnect ");
+      	  if(ret_recv == -1) {
+      	    perror("recv cmd ");
+      	    exit(EXIT_FAILURE);
+      	  }
+      	  // Si le client se deconnecte intempestivement
+      	  else if(ret_recv == 0) {   
+      	    ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
+      	    if(ret_shutdown == -1) perror("shutdown disconnect ");
 
-	    // Ferme le descripteur de la socket
-	    ret_close = close(fd_circuitV);
-	    if(ret_close == -1) perror("close ");
-				
-	    nb_clients--;
-	    online = 0;
-	  }
+      	    // Ferme le descripteur de la socket
+      	    ret_close = close(fd_circuitV);
+      	    if(ret_close == -1) perror("close ");
+      				
+      	    nb_clients--;
+      	    online = 0;
+      	  }
 
-	  r_total_size += ret_recv;
-	}
+      	  r_total_size += ret_recv;
+      	}
 
-	/* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
-	switch(m_recv.cmd) {
-	case GETLIST :
-	  printf("Cmd GETLIST\n");
-	  struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
-	  if(list == NULL) perror("listdir serveur ");
+      	/* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
+      	switch(m_recv.cmd) {
+        	case GETLIST :
+        	  printf("Cmd GETLIST\n");
+            
+        	  //struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
+        	  //if(list == NULL) perror("listdir serveur ");
 
-	  m_send.cmd = GETLIST;
-	  m_send.content.file_list = *list;
-	  m_send.msg_size = sizeof(m_send);
+        	  m_send.cmd = GETLIST;
+            m_send.infos_contenu.nb_fichier = 0;
+            listdir(PATH_TO_STORAGE_DIR, &m_send);
+        	  //m_send.content.file_list = *list;
+        	  m_send.msg_size = sizeof(m_send);
 
-	  s_total_size = 0;
-	  while (s_total_size < sizeof(m_send)) {
-			
-	    ret_send = send(fd_circuitV, &m_send, sizeof(m_send) - s_total_size, 0);
-	    if(ret_send == -1) {
-	      perror("send begin ");
-	    }
-	    // Si le client se deconnecte intempestivement
-	    else if(ret_send == 0) {   
-	      ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-	      if(ret_shutdown == -1) perror("shutdown disconnect ");
+            printf("%p : adr msg \n", &m_send);
+            printf("%p : adr msg_size \n", &m_send.msg_size);
+            printf("%p : adr cmd \n", &m_send.cmd);
+            printf("%p : adr infos_contenu \n", &m_send.infos_contenu);
+            printf("%p : adr content \n", &m_send.content);
+            printf("%p : adr nb_fichier \n", &m_send.infos_contenu.nb_fichier);
+            printf("%p : adr taille_fichier \n", &m_send.infos_contenu.taille_fichier);
+            printf("%p : adr file_buffer \n", &m_send.content.file_buffer);
+            printf("%p : adr file_infos \n", &m_send.content.file_infos);
+            printf("%p : adr file_infos 0 \n", &m_send.content.file_infos[0]);
+            printf("%p : adr file_infos 00 \n", &m_send.content.file_infos[0][0]);
+            printf("%p : adr file_infos 01 \n", &m_send.content.file_infos[0][1]);
+            printf("%p : adr file_infos 1 \n", &m_send.content.file_infos[1]);
 
-	      // Ferme le descripteur de la socket
-	      ret_close = close(fd_circuitV);
-	      if(ret_close == -1) perror("close ");
-				
-	      nb_clients--;
-	      online = 0;
-	    }
+        	  s_total_size = 0;
+        	  while (s_total_size < sizeof(m_send)) {
+        			
+        	    ret_send = send(fd_circuitV, &m_send + s_total_size, sizeof(m_send) - s_total_size, 0);
+        	    if(ret_send == -1) {
+        	      perror("send begin ");
+        	    }
+        	    // Si le client se deconnecte intempestivement
+        	    else if(ret_send == 0) {   
+        	      ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
+        	      if(ret_shutdown == -1) perror("shutdown disconnect ");
 
-	    s_total_size += ret_send;
-	  }
-	  printf("file list sent\n");
-	  break;
+        	      // Ferme le descripteur de la socket
+        	      ret_close = close(fd_circuitV);
+        	      if(ret_close == -1) perror("close ");
+        				
+        	      nb_clients--;
+        	      online = 0;
+        	    }
 
-	case GET :
-	  break;
-	}
+        	    s_total_size += ret_send;
+        	  }
+        	  printf("file list sent\n");
+        	  break;
+
+        	case GET :
+        	  break;
+      	}
 	
-	r_total_size = 0;
+        r_total_size = 0;
       }
 		
     }
@@ -214,55 +231,65 @@ int main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-struct f_list* listdir(char* path_to_dir) {
-
+//struct f_list* listdir(char* path_to_dir) {
+void listdir(char* path_to_dir, struct msg *msg) {
   DIR* dir;
   
   dir = opendir(path_to_dir);
   if(dir == NULL) {
     perror("opendir ");
-    return NULL;
+    //return NULL;
   }
 
-  char file_list [256][256];
+  char* file_list[256];
   
   char path_to_entry [256];
-  int offset = 0;
+  int numFichier = 0;
   
   struct dirent* entry;
   char* entry_infos;
   char cat_buffer [256];
   
   while((entry = readdir(dir)) != NULL) {
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      continue;
+
     strcpy(path_to_entry, path_to_dir);
     strcat(path_to_entry, "/");
     strcat(path_to_entry, entry->d_name);
 
-    entry_infos = lstattoa(path_to_entry);
-    if(entry_infos == NULL) {
+    //content->file_buffer = "aa";
+    msg->infos_contenu.nb_fichier = numFichier + 1;
+    //content->file_list[numFichier].infos = lstattoa(path_to_entry, entry->d_name);
+    strcpy(msg->content.file_infos[numFichier], lstattoa(path_to_entry, entry->d_name));
+
+    /*if(entry_infos == NULL) {
       perror("lstattoa ");
 
-    strcpy(cat_buffer, " ");
+    strcpy(cat_buffer, "\n");
     strcpy(entry->d_name, strcat(cat_buffer, entry->d_name));
     
           
       strcpy(cat_buffer, "No infos ");
       strcpy(entry_infos, strcat(cat_buffer, entry->d_name));
-    } else strcpy(entry_infos, strcat(entry_infos, entry->d_name));
-    
-    file_list[offset] = entry_infos;
+    } else strcpy(entry_infos, strcat(entry_infos, entry->d_name));*/
 
-    offset++;
+    
+    //file_list[offset] = entry_infos;
+
+    numFichier++;
   }
 
-  struct f_list* fl = malloc(sizeof(*fl));
-  fl->file_nb = offset;
-  fl->list = file_list;
+  //struct f_list* fl = malloc(sizeof(*fl));
+  //fl->file_nb = numFichier;
+ // fl->list = file_list;
+
+  //free(fl);
   
-  return fl; 
+  //return fl; 
 }
 
-char* lstattoa(char* path_to_file){
+char* lstattoa(char* path_to_file, char* name){
   
   struct stat file;
   char* file_infos = malloc(256 * sizeof(*file_infos));
@@ -331,8 +358,7 @@ char* lstattoa(char* path_to_file){
   }
   else strcpy(file_infos, strcat(file_infos, "-"));
 
-
-  // add white space
+  // add space
   strcpy(file_infos, strcat(file_infos, " "));
 
   char file_size [10];
@@ -341,6 +367,12 @@ char* lstattoa(char* path_to_file){
   ret_sprintf = sprintf(file_size, "%d", (int)file.st_size);
   if(ret_sprintf == -1) perror("sprintf ");
   else strcpy(file_infos, strcat(file_infos, file_size));
+
+   // add space
+  strcpy(file_infos, strcat(file_infos, " "));
+
+  // add name
+  strcpy(file_infos, strcat(file_infos, name));
   
   return file_infos;
 }
