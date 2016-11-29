@@ -148,10 +148,7 @@ int main(int argc, char **argv){
       // AFFICHAGE DU RESULTAT
       printf("\nListe des fichiers du serveur : \n");
       printf("-------------------------------\n\n");
-      for(int i = 0; i < msg.infos_contenu.nb_fichier; i++) {
-				printf("%s\n", (msg.content.file_infos[i]));
-      }
-      printf("\n");
+	  printf("%s\n", msg.msg_content);
       
     }
     else if(strspn(cmd, "GET") == 3){

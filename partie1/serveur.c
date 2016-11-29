@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
       online = 1;
       
       // Envoi message au client pour commencer les transactions
-      m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd);
+      m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + strlen(m_send.msg_content);
       m_send.cmd = BEGIN;
       
       // Tant que tout le msg n'est pas envoye, on boucle
@@ -164,28 +164,9 @@ int main(int argc, char* argv[]) {
         	  //if(list == NULL) perror("listdir serveur ");
 
         	  m_send.cmd = GETLIST;
-            m_send.infos_contenu.nb_fichier = 0;
-            listdir(PATH_TO_STORAGE_DIR, &m_send);
+            listdir(PATH_TO_STORAGE_DIR, m_send.msg_content);
         	  //m_send.content.file_list = *list;
-        	  m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + sizeof(m_send.infos_contenu) + (sizeof(m_send.content.file_infos[0]) * m_send.infos_contenu.nb_fichier);
-
-            printf("sizeof(msg) : %d \n", m_send.msg_size);
-            printf("sizeof(m_send.content.file_infos[0]) : %lu \n", sizeof(m_send.content.file_infos[0]));
-            printf("m_send.infos_contenu.nb_fichier : %d \n", m_send.infos_contenu.nb_fichier);
-
-            printf("%p : adr msg \n", &m_send);
-            printf("%p : adr msg_size \n", &m_send.msg_size);
-            printf("%p : adr cmd \n", &m_send.cmd);
-            printf("%p : adr infos_contenu \n", &m_send.infos_contenu);
-            printf("%p : adr content \n", &m_send.content);
-            printf("%p : adr nb_fichier \n", &m_send.infos_contenu.nb_fichier);
-            printf("%p : adr taille_fichier \n", &m_send.infos_contenu.taille_fichier);
-            printf("%p : adr file_buffer \n", &m_send.content.file_buffer);
-            printf("%p : adr file_infos \n", &m_send.content.file_infos);
-            printf("%p : adr file_infos 0 \n", &m_send.content.file_infos[0]);
-            printf("%p : adr file_infos 00 \n", &m_send.content.file_infos[0][0]);
-            printf("%p : adr file_infos 01 \n", &m_send.content.file_infos[0][1]);
-            printf("%p : adr file_infos 1 \n", &m_send.content.file_infos[1]);
+        	  m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + strlen(m_send.msg_content);
 
         	  s_total_size = 0;
         	  while (s_total_size < sizeof(m_send.msg_size)) {
@@ -235,64 +216,33 @@ int main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-//struct f_list* listdir(char* path_to_dir) {
-void listdir(char* path_to_dir, struct msg *msg) {
+void listdir(char* path_to_dir, char* chaine){
+
   DIR* dir;
-  
   dir = opendir(path_to_dir);
   if(dir == NULL) {
     perror("opendir ");
-    //return NULL;
   }
-
-  char* file_list[256];
   
-  char path_to_entry [256];
-  int numFichier = 0;
-  
+  char path_file[512];
+  int chaine_len = 0;
   struct dirent* entry;
-  char* entry_infos;
-  char cat_buffer [256];
-  
+
+  strcpy(chaine, "");
+
   while((entry = readdir(dir)) != NULL) {
     if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
       continue;
 
-    strcpy(path_to_entry, path_to_dir);
-    strcat(path_to_entry, "/");
-    strcat(path_to_entry, entry->d_name);
+    strcpy(path_file, path_to_dir);
+    strcat(path_file, "/");
+    strcat(path_file, entry->d_name);
 
-    //content->file_buffer = "aa";
-    msg->infos_contenu.nb_fichier = numFichier + 1;
-    //content->file_list[numFichier].infos = lstattoa(path_to_entry, entry->d_name);
-    strcpy(msg->content.file_infos[numFichier], lstattoa(path_to_entry, entry->d_name));
+    strcat(chaine, lstattoa(path_file, entry->d_name));
 
-    /*if(entry_infos == NULL) {
-      perror("lstattoa ");
-
-    strcpy(cat_buffer, "\n");
-    strcpy(entry->d_name, strcat(cat_buffer, entry->d_name));
-    
-          
-      strcpy(cat_buffer, "No infos ");
-      strcpy(entry_infos, strcat(cat_buffer, entry->d_name));
-    } else strcpy(entry_infos, strcat(entry_infos, entry->d_name));*/
-
-    
-    //file_list[offset] = entry_infos;
-
-    numFichier++;
+    chaine_len = strlen(chaine);
   }
 
-  strcpy(msg->content.file_infos[numFichier], "\0");
-
-  //struct f_list* fl = malloc(sizeof(*fl));
-  //fl->file_nb = numFichier;
- // fl->list = file_list;
-
-  //free(fl);
-  
-  //return fl; 
 }
 
 char* lstattoa(char* path_to_file, char* name){
@@ -379,6 +329,9 @@ char* lstattoa(char* path_to_file, char* name){
 
   // add name
   strcpy(file_infos, strcat(file_infos, name));
+
+  // add name
+  strcpy(file_infos, strcat(file_infos, "\n"));
   
   return file_infos;
 }
