@@ -25,37 +25,21 @@
 
 #include <dirent.h>
 
-#define SIZE_BUFFER_CONTENT_FILE 2048
+#define SIZE_BUFFER_CONTENT 2048
 
 // COMMANDS
 #define BEGIN 0
 #define GETLIST 1
 #define GET 2
 
-struct file_infos {
-  int file_nb;
-  char infos[256];
-};
-
-union content {
-	char file_buffer[SIZE_BUFFER_CONTENT_FILE];
-	char file_infos[256][256];
-};
-
-union infos_contenu {
-	int nb_fichier;
-	int taille_fichier;
-};
-
 struct msg {
   int msg_size; // taille du message entier
   int cmd; // identifiant de la commande à exécuter
-  union infos_contenu infos_contenu;
-  union content content;
+  char msg_content[SIZE_BUFFER_CONTENT];
 };
 
 char* lstattoa(char* path_to_file, char* name);
-//struct f_list* listdir(char* path_to_dir);
 void listdir(char* path_to_dir, struct msg *msg);
 
 int msg_send(int fd_circuitV, struct msg* m_send);
+int msg_recv(int fd_circuitV, struct msg* m_recv)

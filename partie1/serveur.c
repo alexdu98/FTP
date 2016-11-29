@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
       online = 1;
       
       // Envoi message au client pour commencer les transactions
-      m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd);
+      m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + strlen(m_send.msg_content);
       m_send.cmd = BEGIN;
 
       ret_m_send = msg_send(fd_circuitV, &m_send);
