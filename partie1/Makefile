@@ -1,16 +1,19 @@
-all: serveur client clean
+CC = gcc
+CFLAGS = -c
+LFLAGS = -lpthread
+OBJS_CLIENT = client.o commun.o
+OBJS_SERVER = serveur.o commun.o 
 
-serveur: serveur.o
-	gcc -o serveur serveur.o
+all: serveur client
 
-serveur.o: serveur.c
-	gcc -o serveur.o -c serveur.c
+.c.o: 
+	$(CC) $(CFLAGS) $<
 
-client: client.o
-	gcc -o client client.o
+serveur: $(OBJS_SERVER) 
+	$(CC) $(OBJS_SERVER) $(LFLAGS) -o $@ 
 
-client.o: client.c
-	gcc -o client.o -c client.c
+client: $(OBJS_CLIENT) 
+	$(CC) $(OBJS_CLIENT) $(LFLAGS) -o $@ 
 
 clean:
-	rm *.o
+	rm main *.o *~;

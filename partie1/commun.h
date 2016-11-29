@@ -57,3 +57,5 @@ struct msg {
 char* lstattoa(char* path_to_file, char* name);
 //struct f_list* listdir(char* path_to_dir);
 void listdir(char* path_to_dir, struct msg *msg);
+
+int msg_send(int fd_circuitV, struct msg* m_send);

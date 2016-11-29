@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
   
   int fd_circuitV = 0;
   int online = 0;
+  int ret_m_send = 0;
   
   while(go) {
 
@@ -79,35 +80,19 @@ int main(int argc, char* argv[]) {
       // Envoi message au client pour commencer les transactions
       m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd);
       m_send.cmd = BEGIN;
-      
-      // Tant que tout le msg n'est pas envoye, on boucle
-      while (s_total_size < sizeof(m_send.msg_size)) {
-			
-      	ret_send = send(fd_circuitV, &m_send + s_total_size, m_send.msg_size - s_total_size, 0);
-      	if(ret_send == -1) {
-      	  perror("send begin ");
-      	}
-      	// Si le client se deconnecte intempestivement
-      	else if(ret_send == 0) {   
-      	  ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-      	  if(ret_shutdown == -1) perror("shutdown disconnect ");
 
-      	  // Ferme le descripteur de la socket
-      	  ret_close = close(fd_circuitV);
-      	  if(ret_close == -1) perror("close ");
-      				
-      	  nb_clients--;
-      	  online = 0;
-      	}
-
-      	s_total_size += ret_send;
+      ret_m_send = msg_send(fd_circuitV, &m_send);
+      if(ret_m_send == 0) { // Le client s'est deconnecte
+	nb_clients--;
+	online = 0;
       }
+
       
       // BOUCLE DE RECEPTION DES COMMANDES
       while(online) {
 
       	// Reception des 4 premiers octets contenant la taille du msg
-      	while (r_total_size < sizeof(m_send.msg_size)) {
+      	while (r_total_size < sizeof(m_recv.msg_size)) {
       	  ret_recv = recv(fd_circuitV, &m_recv + r_total_size, sizeof(m_recv) - r_total_size, 0);
 
       	  if(ret_recv == -1) {
@@ -157,66 +142,53 @@ int main(int argc, char* argv[]) {
 
       	/* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
       	switch(m_recv.cmd) {
-        	case GETLIST :
-        	  printf("Cmd GETLIST\n");
+	case GETLIST :
+	  printf("Cmd GETLIST\n");
             
-        	  //struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
-        	  //if(list == NULL) perror("listdir serveur ");
+	  //struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
+	  //if(list == NULL) perror("listdir serveur ");
 
-        	  m_send.cmd = GETLIST;
-            m_send.infos_contenu.nb_fichier = 0;
-            listdir(PATH_TO_STORAGE_DIR, &m_send);
-        	  //m_send.content.file_list = *list;
-        	  m_send.msg_size = sizeof(m_send.msg_size) + sizeof(m_send.cmd) + sizeof(m_send.infos_contenu) + (sizeof(m_send.content.file_infos[0]) * m_send.infos_contenu.nb_fichier);
+	  m_send.cmd = GETLIST;
+	  m_send.infos_contenu.nb_fichier = 0;
+	  listdir(PATH_TO_STORAGE_DIR, &m_send);
+	  
+	  m_send.msg_size = sizeof(m_send.msg_size)
+	    + sizeof(m_send.cmd)
+	    + sizeof(m_send.infos_contenu)
+	    + (sizeof(m_send.content.file_infos[0]) * m_send.infos_contenu.nb_fichier);
 
-            printf("sizeof(msg) : %d \n", m_send.msg_size);
-            printf("sizeof(m_send.content.file_infos[0]) : %lu \n", sizeof(m_send.content.file_infos[0]));
-            printf("m_send.infos_contenu.nb_fichier : %d \n", m_send.infos_contenu.nb_fichier);
+	  printf("sizeof(msg) : %d \n", m_send.msg_size);
+	  printf("sizeof(m_send.content.file_infos[0]) : %lu \n", sizeof(m_send.content.file_infos[0]));
+	  printf("m_send.infos_contenu.nb_fichier : %d \n", m_send.infos_contenu.nb_fichier);
 
-            printf("%p : adr msg \n", &m_send);
-            printf("%p : adr msg_size \n", &m_send.msg_size);
-            printf("%p : adr cmd \n", &m_send.cmd);
-            printf("%p : adr infos_contenu \n", &m_send.infos_contenu);
-            printf("%p : adr content \n", &m_send.content);
-            printf("%p : adr nb_fichier \n", &m_send.infos_contenu.nb_fichier);
-            printf("%p : adr taille_fichier \n", &m_send.infos_contenu.taille_fichier);
-            printf("%p : adr file_buffer \n", &m_send.content.file_buffer);
-            printf("%p : adr file_infos \n", &m_send.content.file_infos);
-            printf("%p : adr file_infos 0 \n", &m_send.content.file_infos[0]);
-            printf("%p : adr file_infos 00 \n", &m_send.content.file_infos[0][0]);
-            printf("%p : adr file_infos 01 \n", &m_send.content.file_infos[0][1]);
-            printf("%p : adr file_infos 1 \n", &m_send.content.file_infos[1]);
+	  printf("%p : adr msg \n", &m_send);
+	  printf("%p : adr msg_size \n", &m_send.msg_size);
+	  printf("%p : adr cmd \n", &m_send.cmd);
+	  printf("%p : adr infos_contenu \n", &m_send.infos_contenu);
+	  printf("%p : adr content \n", &m_send.content);
+	  printf("%p : adr nb_fichier \n", &m_send.infos_contenu.nb_fichier);
+	  printf("%p : adr taille_fichier \n", &m_send.infos_contenu.taille_fichier);
+	  printf("%p : adr file_buffer \n", &m_send.content.file_buffer);
+	  printf("%p : adr file_infos \n", &m_send.content.file_infos);
+	  printf("%p : adr file_infos 0 \n", &m_send.content.file_infos[0]);
+	  printf("%p : adr file_infos 00 \n", &m_send.content.file_infos[0][0]);
+	  printf("%p : adr file_infos 01 \n", &m_send.content.file_infos[0][1]);
+	  printf("%p : adr file_infos 1 \n", &m_send.content.file_infos[1]);
 
-        	  s_total_size = 0;
-        	  while (s_total_size < sizeof(m_send.msg_size)) {
-        			
-        	    ret_send = send(fd_circuitV, &m_send + s_total_size, m_send.msg_size - s_total_size, 0);
-        	    if(ret_send == -1) {
-        	      perror("send begin ");
-        	    }
-        	    // Si le client se deconnecte intempestivement
-        	    else if(ret_send == 0) {   
-        	      ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR);
-        	      if(ret_shutdown == -1) perror("shutdown disconnect ");
+	  ret_m_send = msg_send(fd_circuitV, &m_send);
+	  if(ret_m_send == 0) { // Le client s'est deconnecte
+	    nb_clients--;
+	    online = 0;
+	  }
+	  
+	  printf("file list sent\n");
+	  break;
 
-        	      // Ferme le descripteur de la socket
-        	      ret_close = close(fd_circuitV);
-        	      if(ret_close == -1) perror("close ");
-        				
-        	      nb_clients--;
-        	      online = 0;
-        	    }
-
-        	    s_total_size += ret_send;
-        	  }
-        	  printf("file list sent\n");
-        	  break;
-
-        	case GET :
-        	  break;
-      	}
+	case GET :
+	  break;
+	}
 	
-        r_total_size = 0;
+	r_total_size = 0;
       }
 		
     }
@@ -235,150 +207,3 @@ int main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-//struct f_list* listdir(char* path_to_dir) {
-void listdir(char* path_to_dir, struct msg *msg) {
-  DIR* dir;
-  
-  dir = opendir(path_to_dir);
-  if(dir == NULL) {
-    perror("opendir ");
-    //return NULL;
-  }
-
-  char* file_list[256];
-  
-  char path_to_entry [256];
-  int numFichier = 0;
-  
-  struct dirent* entry;
-  char* entry_infos;
-  char cat_buffer [256];
-  
-  while((entry = readdir(dir)) != NULL) {
-    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-      continue;
-
-    strcpy(path_to_entry, path_to_dir);
-    strcat(path_to_entry, "/");
-    strcat(path_to_entry, entry->d_name);
-
-    //content->file_buffer = "aa";
-    msg->infos_contenu.nb_fichier = numFichier + 1;
-    //content->file_list[numFichier].infos = lstattoa(path_to_entry, entry->d_name);
-    strcpy(msg->content.file_infos[numFichier], lstattoa(path_to_entry, entry->d_name));
-
-    /*if(entry_infos == NULL) {
-      perror("lstattoa ");
-
-    strcpy(cat_buffer, "\n");
-    strcpy(entry->d_name, strcat(cat_buffer, entry->d_name));
-    
-          
-      strcpy(cat_buffer, "No infos ");
-      strcpy(entry_infos, strcat(cat_buffer, entry->d_name));
-    } else strcpy(entry_infos, strcat(entry_infos, entry->d_name));*/
-
-    
-    //file_list[offset] = entry_infos;
-
-    numFichier++;
-  }
-
-  strcpy(msg->content.file_infos[numFichier], "\0");
-
-  //struct f_list* fl = malloc(sizeof(*fl));
-  //fl->file_nb = numFichier;
- // fl->list = file_list;
-
-  //free(fl);
-  
-  //return fl; 
-}
-
-char* lstattoa(char* path_to_file, char* name){
-  
-  struct stat file;
-  char* file_infos = malloc(256 * sizeof(*file_infos));
-
-  if(lstat(path_to_file, &file) < 0){
-    perror("lstat ");
-    return NULL;
-  }
-
-  // File type (d, - ou l)
-  if(S_ISREG(file.st_mode)){
-    strcpy(file_infos, "-");
-  }
-  if(S_ISDIR(file.st_mode)){
-    strcpy(file_infos, "d");
-  }
-  if(S_ISLNK(file.st_mode)){
-    strcpy(file_infos, "l");
-  }
-  
-  // USR permissions tests
-  if((file.st_mode & S_IRUSR) == S_IRUSR){
-    strcpy(file_infos, strcat(file_infos, "r"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IWUSR) == S_IWUSR){
-    strcpy(file_infos, strcat(file_infos, "w"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IXUSR) == S_IXUSR){
-    strcpy(file_infos, strcat(file_infos, "x"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  // GRP permissions tests
-  if((file.st_mode & S_IRGRP) == S_IRGRP){
-    strcpy(file_infos, strcat(file_infos, "r"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IWGRP) == S_IWGRP){
-    strcpy(file_infos, strcat(file_infos, "w"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IXGRP) == S_IXGRP){
-    strcpy(file_infos, strcat(file_infos, "x"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  // OTH permissions tests
-  if((file.st_mode & S_IROTH) == S_IROTH){
-    strcpy(file_infos, strcat(file_infos, "r"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IWOTH) == S_IWOTH){
-    strcpy(file_infos, strcat(file_infos, "w"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  if((file.st_mode & S_IXOTH) == S_IXOTH){
-    strcpy(file_infos, strcat(file_infos, "x"));
-  }
-  else strcpy(file_infos, strcat(file_infos, "-"));
-
-  // add space
-  strcpy(file_infos, strcat(file_infos, " "));
-
-  char file_size [10];
-  int ret_sprintf = 0;
-
-  ret_sprintf = sprintf(file_size, "%d", (int)file.st_size);
-  if(ret_sprintf == -1) perror("sprintf ");
-  else strcpy(file_infos, strcat(file_infos, file_size));
-
-   // add space
-  strcpy(file_infos, strcat(file_infos, "\t"));
-
-  // add name
-  strcpy(file_infos, strcat(file_infos, name));
-  
-  return file_infos;
-}

@@ -103,9 +103,9 @@ int main(int argc, char **argv){
 
     }
     else if(strcmp(cmd, "QUIT") == 0){
-    	printf("\nAu revoir :)\n");
-    	printf("------------\n");
-    	printf("\n");
+      printf("\nAu revoir :)\n");
+      printf("------------\n");
+      printf("\n");
       break;
 
     }
@@ -116,40 +116,40 @@ int main(int argc, char **argv){
 
       // ENVOI DE LA CMD GETLIST
       while(sizeSendTotal < sizeof(msg)) {
-				if((sizeSend = send(localSocket, &msg + sizeSendTotal, sizeof(msg) - sizeSendTotal , 0)) == -1){
-				  perror("Erreur send() ");
-				}
-				sizeSendTotal += sizeSend;
+	if((sizeSend = send(localSocket, &msg + sizeSendTotal, sizeof(msg) - sizeSendTotal , 0)) == -1){
+	  perror("Erreur send() ");
+	}
+	sizeSendTotal += sizeSend;
       }
 
       // RECEPTION DU RESULTAT DE GETLIST
       sizeRcvTotal = 0;
       do{
-				if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
-				  perror("Erreur recv() ");
-				  close(localSocket);
-				  return EXIT_FAILURE;
-				}
-				sizeRcvTotal += sizeRcv;
-				//printf("size rcv total = %d\n", sizeRcvTotal);
+	if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
+	  perror("Erreur recv() ");
+	  close(localSocket);
+	  return EXIT_FAILURE;
+	}
+	sizeRcvTotal += sizeRcv;
+	//printf("size rcv total = %d\n", sizeRcvTotal);
       } while(sizeRcvTotal < sizeof(msg.msg_size));
 
       //printf("msg_size = %d", msg.msg_size);
       
       while(sizeRcvTotal < msg.msg_size) {
-				if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
-				  perror("Erreur recv() ");
-				  close(localSocket);
-				  return EXIT_FAILURE;
-				}
-				sizeRcvTotal += sizeRcv;
+	if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
+	  perror("Erreur recv() ");
+	  close(localSocket);
+	  return EXIT_FAILURE;
+	}
+	sizeRcvTotal += sizeRcv;
       } 
 
       // AFFICHAGE DU RESULTAT
       printf("\nListe des fichiers du serveur : \n");
       printf("-------------------------------\n\n");
       for(int i = 0; i < msg.infos_contenu.nb_fichier; i++) {
-				printf("%s\n", (msg.content.file_infos[i]));
+	printf("%s\n", (msg.content.file_infos[i]));
       }
       printf("\n");
       
@@ -163,26 +163,26 @@ int main(int argc, char **argv){
       char DIRLocal[256] = "./";
 
       while(tableauNomsFichiers != NULL){
-				if(strcmp(tableauNomsFichiers, "-DIRL") == 0){
-				  tableauNomsFichiers = strtok(NULL, " ");
-				  if(tableauNomsFichiers != NULL){
-				    strcpy(DIRLocal, tableauNomsFichiers);
-				  }
-				  else{
-				    printf("[-DIRL repertoireLocal] \n");
-				    continue;
-				  }
-				}
+	if(strcmp(tableauNomsFichiers, "-DIRL") == 0){
+	  tableauNomsFichiers = strtok(NULL, " ");
+	  if(tableauNomsFichiers != NULL){
+	    strcpy(DIRLocal, tableauNomsFichiers);
+	  }
+	  else{
+	    printf("[-DIRL repertoireLocal] \n");
+	    continue;
+	  }
+	}
 
-				tableauNomsFichiers = strtok(NULL, " ");
+	tableauNomsFichiers = strtok(NULL, " ");
       }
 
       do{
-				if((sizeSend = send(localSocket, &msg + sizeSendTotal, strlen(cmd), 0)) == -1){
-				  perror("Erreur send() ");
-				  continue;
-				}
-				sizeSendTotal += sizeSend;
+	if((sizeSend = send(localSocket, &msg + sizeSendTotal, strlen(cmd), 0)) == -1){
+	  perror("Erreur send() ");
+	  continue;
+	}
+	sizeSendTotal += sizeSend;
       }while(sizeSendTotal < sizeof(msg.cmd));
 
     }
