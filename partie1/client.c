@@ -62,11 +62,11 @@ int main(int argc, char **argv){
     }
     sizeRcvTotal += sizeRcv;
     //printf("size rcv total = %d\n", sizeRcvTotal);
-  } while(sizeRcvTotal < sizeof(msg.msg_size));
+  } while(sizeRcvTotal < sizeof(msg.size));
 
-  //printf("msg_size = %d \n", msg.msg_size);
+  //printf("size = %d \n", msg.size);
   
-  while(sizeRcvTotal < msg.msg_size) {
+  while(sizeRcvTotal < msg.size) {
     if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
       perror("Erreur recv() ");
       close(localSocket);
@@ -112,7 +112,7 @@ int main(int argc, char **argv){
     else if(strcmp(cmd, "GETLIST") == 0){
       
       msg.cmd = GETLIST;
-      msg.msg_size = sizeof(msg);
+      msg.size = sizeof(msg);
 
       // ENVOI DE LA CMD GETLIST
       while(sizeSendTotal < sizeof(msg)) {
@@ -132,11 +132,11 @@ int main(int argc, char **argv){
 	}
 	sizeRcvTotal += sizeRcv;
 	//printf("size rcv total = %d\n", sizeRcvTotal);
-      } while(sizeRcvTotal < sizeof(msg.msg_size));
+      } while(sizeRcvTotal < sizeof(msg.size));
 
-      //printf("msg_size = %d", msg.msg_size);
+      //printf("size = %d", msg.size);
       
-      while(sizeRcvTotal < msg.msg_size) {
+      while(sizeRcvTotal < msg.size) {
 	if((sizeRcv = recv(localSocket, &msg + sizeRcvTotal, sizeof(msg) - sizeRcvTotal, 0)) == -1){
 	  perror("Erreur recv() ");
 	  close(localSocket);
@@ -148,7 +148,7 @@ int main(int argc, char **argv){
       // AFFICHAGE DU RESULTAT
       printf("\nListe des fichiers du serveur : \n");
       printf("-------------------------------\n\n");
-      printf("%s\n", msg.msg_content);
+      printf("%s\n", msg.content);
       
     }
     else if(strspn(cmd, "GET") == 3){
