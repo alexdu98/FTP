@@ -96,7 +96,7 @@ int main(int argc, char * argv[]) {
         /* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
         switch (m_recv.cmd) {
         case GETLIST:
-          printf("CMD : GETLIST\n");
+          printf("CMD : GETLIST \n");
 
           //struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
           //if(list == NULL) perror("listdir serveur ");
@@ -104,12 +104,10 @@ int main(int argc, char * argv[]) {
           m_send.cmd = GETLIST;
           listdir(PATH_TO_STORAGE_DIR, m_send.content);
 
-          printf("%s \n", m_send.content);
-
           m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
-          printf("%d !\n", m_send.size);
+
           ret_m_send = msg_send(fd_circuitV, &m_send);
-          printf("b\n");
+
           if (ret_m_send == 0) { // Le client s'est deconnecte
             nb_clients--;
             online = 0;

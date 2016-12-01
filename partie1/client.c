@@ -112,14 +112,14 @@ int main(int argc, char **argv){
     else if(strcmp(cmd, "GETLIST") == 0){
       
       msg.cmd = GETLIST;
-      msg.size = sizeof(msg);
+      msg.size = sizeof(msg.size) + sizeof(msg.cmd) + strlen(msg.content);
 
       // ENVOI DE LA CMD GETLIST
-      while(sizeSendTotal < sizeof(msg)) {
-	if((sizeSend = send(localSocket, &msg + sizeSendTotal, sizeof(msg) - sizeSendTotal , 0)) == -1){
-	  perror("Erreur send() ");
-	}
-	sizeSendTotal += sizeSend;
+      while(sizeSendTotal < msg.size) {
+		if((sizeSend = send(localSocket, &msg + sizeSendTotal, msg.size - sizeSendTotal , 0)) == -1){
+		  perror("Erreur send() ");
+		}
+		sizeSendTotal += sizeSend;
       }
 
       // RECEPTION DU RESULTAT DE GETLIST

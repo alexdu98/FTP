@@ -132,11 +132,11 @@ int msg_send(int fd_circuitV, struct msg* m_send) {
 
   int ret_send = 0, ret_shutdown = 0, ret_close = 0;
   int s_total_size = 0;
-  printf("c\n");
+
   while (s_total_size < sizeof(m_send->size)) {		
-    printf("k\n");
+
     ret_send = send(fd_circuitV, m_send + s_total_size, m_send->size - s_total_size, 0);
-    printf("l\n");
+
     if(ret_send == -1) {
       perror("send msg_send ");
       return 0;
@@ -154,7 +154,6 @@ int msg_send(int fd_circuitV, struct msg* m_send) {
 
     s_total_size += ret_send;
   }
-printf("d\n");
   return s_total_size;
 
 }
@@ -181,7 +180,6 @@ int msg_recv(int fd_circuitV, struct msg* m_recv) {
       // Ferme le descripteur de la socket
       ret_close = close(fd_circuitV);
       if(ret_close == -1) perror("close ");
-      	
         return 0;
     }
       	  
@@ -190,7 +188,7 @@ int msg_recv(int fd_circuitV, struct msg* m_recv) {
 
   // Taille du msg recu, maintenant reception du reste
   while(r_total_size < m_recv->size) {
-
+    printf("%d/%d \n", r_total_size, m_recv->size);
     ret_recv = recv(fd_circuitV, m_recv + r_total_size, sizeof(m_recv) - r_total_size, 0);
 
     if(ret_recv == -1) {
@@ -205,7 +203,7 @@ int msg_recv(int fd_circuitV, struct msg* m_recv) {
       // Ferme le descripteur de la socket
       ret_close = close(fd_circuitV);
       if(ret_close == -1) perror("close ");
-      				
+
       return 0;
     }
 
