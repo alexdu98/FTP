@@ -1,5 +1,16 @@
 #include "commun.h"
 
-// SERVER CONSTANTS
+
+// ##############################
+// ######### CONSTANTES #########
+// ##############################
+
 #define LG_FILE_ATTENTE 1
-#define PATH_TO_STORAGE_DIR "../repDL/"
+
+
+// ##############################
+// ######### FONCTIONS ##########
+// ##############################
+
+char* lstattoa(char* path_to_file, char* name);
+void listdir(const char* path_to_dir, char* chaine);

@@ -1,137 +1,128 @@
 #include "serveur.h"
 
-/***********
- *** MAIN
- ***********/
-int main(int argc, char * argv[]) {
+/**
+	Liste les fichiers du répertoire path_to_dir dans la variable buffer
+*/
+void listdir(const char* path_to_dir, char* buffer){
 
-  /**********************************************************************************
-   ********************    MISE EN PLACE DE LA COMMUNICATION     ********************
-   **********************************************************************************/
+	DIR* dir;
+	dir = opendir(path_to_dir);
+	if(dir == NULL) {
+		perror("opendir ");
+	}
+	
+	char path_file[512];
+	int chaine_len = 0;
+	struct dirent* entry;
 
-  // Creation de la boite publique
-  int fd_brPublique = socket(PF_INET, SOCK_STREAM, 0);
-  if (fd_brPublique == -1) {
-    perror("socket ");
-    exit(EXIT_FAILURE);
-  }
+	strcpy(buffer, "");
 
-  struct sockaddr_in brPublique;
-  brPublique.sin_family = AF_INET;
-  brPublique.sin_addr.s_addr = INADDR_ANY;
-  brPublique.sin_port = 0; // num de port choisi par le systeme
+	while((entry = readdir(dir)) != NULL) {
+		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			continue;
 
-  // Liaison de la socket et de la struct 
-  int ret_bind = bind(fd_brPublique, (struct sockaddr * ) & brPublique, sizeof(brPublique));
-  if (ret_bind == -1) {
-    perror("bind ");
-    exit(EXIT_FAILURE);
-  }
+		strcpy(path_file, path_to_dir);
+		strcat(path_file, "/");
+		strcat(path_file, entry->d_name);
 
-  // Afficher le numero de port pour les clients
-  socklen_t length = sizeof(brPublique);
-  getsockname(fd_brPublique, (struct sockaddr * ) & brPublique, & length);
+		strcat(buffer, lstattoa(path_file, entry->d_name));
 
-  printf("Le numéro de la boîte publique est %d \n", ntohs(brPublique.sin_port));
+		chaine_len = strlen(buffer);
+	}
 
-  // Creation d'une file d'attente des connexions
-  int ret_listen = listen(fd_brPublique, LG_FILE_ATTENTE);
-  if (ret_listen == -1) {
-    perror("listen ");
-    exit(EXIT_FAILURE);
-  }
+}
 
-  /****************************************************************
-   ***************    TRAITEMENT DU CLIENT     ********************
-   ****************************************************************/
+/**
+	Retourne la chaine de caractères contenant les informations du fichier
+	name dans le répertoire path_to_file
+*/
+char* lstattoa(char* path_to_file, char* name){
+	
+	struct stat file;
+	char* file_infos = malloc(256 * sizeof(*file_infos));
 
-  int ret_shutdown = 0, ret_send = 0, ret_recv = 0, ret_close = 0;
-  int r_total_size = 0, s_total_size = 0;
-  int nb_clients = 0;
+	if(lstat(path_to_file, &file) < 0){
+		perror("lstat ");
+		return NULL;
+	}
 
-  struct msg m_send;
-  struct msg m_recv;
+	// File type (d, - ou l)
+	if(S_ISREG(file.st_mode)){
+		strcpy(file_infos, "-");
+	}
+	if(S_ISDIR(file.st_mode)){
+		strcpy(file_infos, "d");
+	}
+	if(S_ISLNK(file.st_mode)){
+		strcpy(file_infos, "l");
+	}
+	
+	// USR permissions tests
+	if((file.st_mode & S_IRUSR) == S_IRUSR){
+		strcpy(file_infos, strcat(file_infos, "r"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-  struct sockaddr_in brCv;
-  socklen_t lgbrCv = sizeof(brCv);
+	if((file.st_mode & S_IWUSR) == S_IWUSR){
+		strcpy(file_infos, strcat(file_infos, "w"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-  int fd_circuitV = 0;
-  int online = 0;
-  int ret_m_send = 0;
+	if((file.st_mode & S_IXUSR) == S_IXUSR){
+		strcpy(file_infos, strcat(file_infos, "x"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-  while(1) {
+	// GRP permissions tests
+	if((file.st_mode & S_IRGRP) == S_IRGRP){
+		strcpy(file_infos, strcat(file_infos, "r"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-    // Acceptation d'une connexion de client
-    fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) & brCv, & lgbrCv);
+	if((file.st_mode & S_IWGRP) == S_IWGRP){
+		strcpy(file_infos, strcat(file_infos, "w"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-    // Augmente le nb de clients apres acceptation
-    nb_clients++;
+	if((file.st_mode & S_IXGRP) == S_IXGRP){
+		strcpy(file_infos, strcat(file_infos, "x"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-    if (fd_circuitV == -1) {
-      perror("accept ");
-    }
-    else { // Traitement normal du client
-      printf("Un client vient de se connecter. FD = %d\n", fd_circuitV);
-      online = 1;
+	// OTH permissions tests
+	if((file.st_mode & S_IROTH) == S_IROTH){
+		strcpy(file_infos, strcat(file_infos, "r"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-      // Envoi message au client pour commencer les transactions
-      m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
-      m_send.cmd = BEGIN;
+	if((file.st_mode & S_IWOTH) == S_IWOTH){
+		strcpy(file_infos, strcat(file_infos, "w"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-      ret_m_send = msg_send(fd_circuitV, &m_send);
-      if (ret_m_send == 0) { // Le client s'est deconnecte
-        nb_clients--;
-        online = 0;
-      }
+	if((file.st_mode & S_IXOTH) == S_IXOTH){
+		strcpy(file_infos, strcat(file_infos, "x"));
+	}
+	else strcpy(file_infos, strcat(file_infos, "-"));
 
-      // BOUCLE DE RECEPTION DES COMMANDES
-      while (online) {
+	// add space
+	strcpy(file_infos, strcat(file_infos, " "));
 
-        int res_recv = msg_recv(fd_circuitV, &m_recv);
-        if(res_recv == 0){
-          nb_clients--;
-          online = 0;
-        }
+	char file_size [10];
+	int ret_sprintf = 0;
 
-        /* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
-        switch (m_recv.cmd) {
-        case GETLIST:
-          printf("CMD : GETLIST \n");
+	ret_sprintf = sprintf(file_size, "%d", (int)file.st_size);
+	if(ret_sprintf == -1) perror("sprintf ");
+	else strcpy(file_infos, strcat(file_infos, file_size));
 
-          //struct f_list* list = listdir(PATH_TO_STORAGE_DIR);
-          //if(list == NULL) perror("listdir serveur ");
+	 // add space
+	strcpy(file_infos, strcat(file_infos, "\t"));
 
-          m_send.cmd = GETLIST;
-          listdir(PATH_TO_STORAGE_DIR, m_send.content);
+	// add name
+	strcpy(file_infos, strcat(file_infos, name));
 
-          m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
-
-          ret_m_send = msg_send(fd_circuitV, &m_send);
-
-          if (ret_m_send == 0) { // Le client s'est deconnecte
-            nb_clients--;
-            online = 0;
-          }
-
-          printf("GETLIST sent \n");
-          break;
-
-        case GET:
-          break;
-        }
-
-        r_total_size = 0;
-      }
-    }
-  }
-
-  // Ferme la communication entre sockets
-  ret_shutdown = shutdown(fd_brPublique, SHUT_RDWR);
-  if (ret_shutdown == -1) perror("shutdown ");
-
-  // Ferme le descripteur de la socket
-  ret_close = close(fd_brPublique);
-  if (ret_close == -1) perror("close ");
-
-  return EXIT_SUCCESS;
+	// add name
+	strcpy(file_infos, strcat(file_infos, "\n"));
+	
+	return file_infos;
 }

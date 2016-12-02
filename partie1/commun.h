@@ -25,12 +25,22 @@
 
 #include <dirent.h>
 
+
+// ##############################
+// ######### CONSTANTES #########
+// ##############################
+
 #define SIZE_BUFFER_CONTENT 2048
 
-// COMMANDS
+// COMMANDES
 #define BEGIN 0
 #define GETLIST 1
 #define GET 2
+
+
+// ##############################
+// ######### STRUCTURES #########
+// ##############################
 
 struct msg {
   int size; // taille du message entier
@@ -38,8 +48,10 @@ struct msg {
   char content[SIZE_BUFFER_CONTENT]; // contenu du message
 };
 
-char* lstattoa(char* path_to_file, char* name);
-void listdir(char* path_to_dir, char* chaine);
+
+// ##############################
+// ######### FONCTIONS ##########
+// ##############################
 
 int msg_send(int fd_circuitV, struct msg* m_send);
 int msg_recv(int fd_circuitV, struct msg* m_recv);
