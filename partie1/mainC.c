@@ -11,17 +11,21 @@ int main(int argc, char **argv){
 	// ## DECLARATION DES VARIABLES ##
 	// ###############################
 
-	char *realIP;
 	struct hostent *host;
-	int localSocket;
+	struct in_addr **ip;
 	struct sockaddr_in clientAddr;
 	struct msg msgSend;
 	struct msg msgRecv;
+
+	char *realIP;
+	char cmd[256];
+	
+	int localSocket;
 	int sizeRcvTotal = 0;
 	int sizeRcv = 0;
 	int sizeSendTotal = 0;
 	int sizeSend;
-	char cmd[256];
+	
 
 
 	/*
@@ -31,7 +35,7 @@ int main(int argc, char **argv){
 		perror("Erreur gethostbyname() ");
 		return EXIT_FAILURE;
 	}
-	struct in_addr **ip = (struct in_addr **) host->h_addr_list;
+	ip = (struct in_addr **) host->h_addr_list;
 	realIP = inet_ntoa(*ip[0]);
 
 	/*
@@ -124,36 +128,77 @@ int main(int argc, char **argv){
 			printf("%s\n", msgRecv.content);
 
 		}
-		else if(strspn(cmd, "GET") == 3){
+		else if(strncmp(cmd, "GET", 3) == 0){
 
 			msgSend.cmd = GET;
+			char DIRLocal[256] = "";
 
-			char* tableauNomsFichiers = strtok(cmd, " ");
+			char copyCmd[256];
+			strcpy(copyCmd, cmd);
 
-			char DIRLocal[256] = "./";
+			char copyFiles[256];
+			strcpy(copyFiles, cmd + 4);
 
-			while(tableauNomsFichiers != NULL){
-				if(strcmp(tableauNomsFichiers, "-DIRL") == 0){
-					tableauNomsFichiers = strtok(NULL, " ");
-					if(tableauNomsFichiers != NULL){
-						strcpy(DIRLocal, tableauNomsFichiers);
+			char* tabCmdGet = strtok(copyCmd, " ");
+
+			int taille = -6;
+			while(tabCmdGet != NULL){
+				taille += strlen(tabCmdGet);
+				if(strcmp(tabCmdGet, "-DIRL") == 0){
+					copyFiles[taille] = '\0';
+					tabCmdGet = strtok(NULL, " ");
+					if(tabCmdGet != NULL){
+						strcpy(DIRLocal, tabCmdGet);
+						break;
 					}
 					else{
 						printf("[-DIRL repertoireLocal] \n");
-						continue;
+						break;
 					}
 				}
-
-				tableauNomsFichiers = strtok(NULL, " ");
+				tabCmdGet = strtok(NULL, " ");
 			}
 
-			do{
-				if((sizeSend = send(localSocket, &msgSend + sizeSendTotal, msgSend.size - sizeSendTotal, 0)) == -1){
-					perror("Erreur send() ");
-					continue;
+			if(strcmp(DIRLocal,"") == 0)
+				strcpy(DIRLocal, ".");
+
+			tabCmdGet = strtok(copyFiles, " ");
+			while(tabCmdGet != NULL){
+				strcpy(msgSend.content, tabCmdGet);
+				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd) + strlen(msgSend.content);
+
+				// ENVOI DE LA CMD GET
+				int ret_m_send = msg_send(localSocket, &msgSend);
+
+				// RECEPTION DE LA TAILLE DU FICHIER OU DE L'ERREUR
+				int res_recv = msg_recv(localSocket, &msgRecv);
+				if(msgRecv.cmd == ERROR){
+					printf("Erreur : %s \n", msgRecv.content);
 				}
-				sizeSendTotal += sizeSend;
-			}while(sizeSendTotal < sizeof(msgSend.cmd));
+				else{
+					unsigned int tailleFichier = atoi(msgRecv.content);
+
+					printf("%d \n", tailleFichier);
+				}
+
+				
+
+				tabCmdGet = strtok(NULL, " ");
+			}
+
+			
+
+			// On créer/ouvre le fichier
+			/*if((fichier = fopen(nomFichier, "wb+")) == NULL)
+				perror("Erreur fopen() ");
+
+			// RECEPTION DU RESULTAT DE GET
+			memset(msgRecv.content, 0, sizeof(msgRecv.content));
+			int res_recv = msg_recv(localSocket, &msgRecv);
+
+			// On se place à l'endroit où il faut écrire
+			fseek(fichier, nbCarRecuTotal, SEEK_SET);
+			fwrite(contenuFichier, 1, nbCarRecu, fichier);*/
 
 		}
 		else{

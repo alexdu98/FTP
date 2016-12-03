@@ -36,7 +36,8 @@
 #define BEGIN 0
 #define GETLIST 1
 #define GET 2
-
+#define SIZE 3
+#define ERROR 4
 
 // ##############################
 // ######### STRUCTURES #########

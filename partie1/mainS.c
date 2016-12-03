@@ -13,6 +13,12 @@ int main(int argc, char * argv[]) {
   else if(argc == 2){
     if(access(argv[1], F_OK) == 0){
       PATH_TO_STORAGE_DIR = argv[1];
+      if(argv[1][strlen(argv[1])] != '/'){
+        char nomTemp[256];
+        strcpy(nomTemp, argv[1]);
+        strcat(nomTemp, "/");
+        PATH_TO_STORAGE_DIR = nomTemp;
+      }
     }
     else{
       printf("'%s' \n", argv[1]);
@@ -137,8 +143,47 @@ int main(int argc, char * argv[]) {
           printf("GETLIST sent (%d/%d) \n", ret_m_send, m_send.size);
           break;
 
-        case GET:
-          printf("CMD : GET \n");
+          case GET:
+            printf("CMD : GET (%s) \n", m_recv.content);
+
+            /* Fichier à renvoyer */
+            FILE* fichier = NULL;
+            /* Taille du fichier à renvoyer */
+            char tailleFichier[32];
+
+            char nomFichier[255];
+
+            /* Réinitialisation de la variable */
+            memset(nomFichier, 0, sizeof(nomFichier));
+
+            strcpy(nomFichier, PATH_TO_STORAGE_DIR);
+            strcat(nomFichier, m_recv.content);
+
+           
+
+
+
+            /* Si on ne peut pas accéder au fichier */
+            if((fichier = fopen(nomFichier, "rb")) == NULL){
+              m_send.cmd = ERROR;
+              strcpy(m_send.content, m_recv.content);
+              strcat(m_send.content, " -> ");
+              strcat(m_send.content, strerror(errno));
+              printf("ERROR ");
+            }
+            /* S'il n'y a pas d'erreur */
+            else{
+              m_send.cmd = SIZE;
+              fseek(fichier, 0, SEEK_END);
+              sprintf(m_send.content, "%ld", ftell(fichier));
+              printf("SIZE ");
+            }
+
+            m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
+            ret_m_send = msg_send(fd_circuitV, &m_send);
+
+            printf("sent (%d/%d) [%s] \n", ret_m_send, m_send.size, m_send.content);
+
           break;
         }
 
