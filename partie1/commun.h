@@ -38,13 +38,14 @@
 #define GET 2
 #define SIZE 3
 #define ERROR 4
+#define CONTENT_FILE 5
 
 // ##############################
 // ######### STRUCTURES #########
 // ##############################
 
 struct msg {
-  int size; // taille du message entier
+  unsigned int size; // taille du message entier
   int cmd; // identifiant de la commande à exécuter
   char content[SIZE_BUFFER_CONTENT]; // contenu du message
 };
@@ -54,5 +55,5 @@ struct msg {
 // ######### FONCTIONS ##########
 // ##############################
 
-int msg_send(int fd_circuitV, struct msg* m_send);
-int msg_recv(int fd_circuitV, struct msg* m_recv);
+int msg_send(int fd_circuitV, struct msg* m_send, int onlyContent);
+int msg_recv(int fd_circuitV, struct msg* m_recv, int onlyContent);

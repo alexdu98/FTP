@@ -61,23 +61,8 @@ int main(int argc, char **argv){
 
 	printf("En attente de connexion... \n");
 
-	do{
-		if((sizeRcv = recv(localSocket, &msgRecv + sizeRcvTotal, sizeof(msgRecv) - sizeRcvTotal, 0)) == -1){
-			perror("Erreur recv() ");
-			close(localSocket);
-			return EXIT_FAILURE;
-		}
-		sizeRcvTotal += sizeRcv;
-	} while(sizeRcvTotal < sizeof(msgRecv.size));
-	
-	while(sizeRcvTotal < msgRecv.size) {
-		if((sizeRcv = recv(localSocket, &msgRecv + sizeRcvTotal, sizeof(msgRecv) - sizeRcvTotal, 0)) == -1){
-			perror("Erreur recv() ");
-			close(localSocket);
-			return EXIT_FAILURE;
-		}
-		sizeRcvTotal += sizeRcv;
-	} 
+	memset(msgRecv.content, 0, sizeof(msgRecv.content));
+	int res_recv = msg_recv(localSocket, &msgRecv, 0);
 	
 	if(msgRecv.cmd != BEGIN){
 		printf("Connexion refusee, veuillez reessayer plus tard \n");
@@ -104,6 +89,7 @@ int main(int argc, char **argv){
 		}
 		else if(strcmp(cmd, "QUIT") == 0){
 			shutdown(localSocket, SHUT_RDWR);
+			close(localSocket);
 			printf("\nAu revoir :)\n");
 			printf("------------\n");
 			printf("\n");
@@ -116,11 +102,11 @@ int main(int argc, char **argv){
 			msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
 
 			// ENVOI DE LA CMD GETLIST
-			int ret_m_send = msg_send(localSocket, &msgSend);
+			int ret_m_send = msg_send(localSocket, &msgSend, 0);
 
 			// RECEPTION DU RESULTAT DE GETLIST
 			memset(msgRecv.content, 0, sizeof(msgRecv.content));
-			int res_recv = msg_recv(localSocket, &msgRecv);
+			int res_recv = msg_recv(localSocket, &msgRecv, 0);
 
 			// AFFICHAGE DU RESULTAT
 			printf("\nListe des fichiers du serveur : \n");
@@ -149,6 +135,9 @@ int main(int argc, char **argv){
 					tabCmdGet = strtok(NULL, " ");
 					if(tabCmdGet != NULL){
 						strcpy(DIRLocal, tabCmdGet);
+						if(DIRLocal[strlen(DIRLocal)] != '/'){
+			        strcat(DIRLocal, "/");
+			      }
 						break;
 					}
 					else{
@@ -160,45 +149,82 @@ int main(int argc, char **argv){
 			}
 
 			if(strcmp(DIRLocal,"") == 0)
-				strcpy(DIRLocal, ".");
+				strcpy(DIRLocal, "./");
 
-			tabCmdGet = strtok(copyFiles, " ");
-			while(tabCmdGet != NULL){
-				strcpy(msgSend.content, tabCmdGet);
+			char* file = strtok(copyFiles, " ");
+			while(file != NULL){
+				strcpy(msgSend.content, file);
 				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd) + strlen(msgSend.content);
 
 				// ENVOI DE LA CMD GET
-				int ret_m_send = msg_send(localSocket, &msgSend);
+				int ret_m_send = msg_send(localSocket, &msgSend, 0);
 
 				// RECEPTION DE LA TAILLE DU FICHIER OU DE L'ERREUR
-				int res_recv = msg_recv(localSocket, &msgRecv);
+				int res_recv = msg_recv(localSocket, &msgRecv, 0);
 				if(msgRecv.cmd == ERROR){
 					printf("Erreur : %s \n", msgRecv.content);
+					continue;
 				}
-				else{
-					unsigned int tailleFichier = atoi(msgRecv.content);
-
-					printf("%d \n", tailleFichier);
-				}
-
 				
+				unsigned int tailleFichier = atoi(msgRecv.content);
 
-				tabCmdGet = strtok(NULL, " ");
+				printf("\nTaille du fichier %s : %d \n", file, tailleFichier);
+
+				char nomFichier[255];
+
+        /* Réinitialisation de la variable */
+        memset(nomFichier, 0, sizeof(nomFichier));
+
+        strcpy(nomFichier, DIRLocal);
+        strcat(nomFichier, file);
+
+      	/* Fichier à remplir */
+				FILE* fichier = NULL;
+		
+				/* On créer/ouvre le fichier */
+				if((fichier = fopen(nomFichier, "wb+")) == NULL)
+					perror("Erreur fopen() ");
+
+				unsigned int nbCarRecuTotal = 0;
+				unsigned int carFseek = 0;
+				unsigned int test = 0;
+				int nbCarALire = 0;
+				int onlyContent = 0;
+				while(test < tailleFichier){
+
+					msgRecv.size = (tailleFichier + sizeof(msgRecv.size) + sizeof(msgRecv.cmd)) - nbCarRecuTotal;
+					if(msgRecv.size > sizeof(msgRecv.content))
+						msgRecv.size = sizeof(msgRecv.content);
+
+					int res_recv = msg_recv(localSocket, &msgRecv, onlyContent);
+					
+					fseek(fichier, carFseek, SEEK_SET);
+					unsigned int resfw = 0;
+
+					nbCarALire = sizeof(msgRecv.content);
+					
+					if(msgRecv.size < sizeof(msgRecv.content)){
+						nbCarALire = msgRecv.size;
+					}
+					if(nbCarALire > tailleFichier)
+						nbCarALire = tailleFichier;
+
+					resfw = fwrite(msgRecv.content, 1, nbCarALire, fichier);
+
+					test += resfw;
+					
+					carFseek += resfw;
+					nbCarRecuTotal += res_recv;
+				
+					onlyContent++;
+				}
+
+				fclose(fichier);
+
+				printf("Le fichier %s a bien ete telecharge \n", file);
+
+				file = strtok(NULL, " ");
 			}
-
-			
-
-			// On créer/ouvre le fichier
-			/*if((fichier = fopen(nomFichier, "wb+")) == NULL)
-				perror("Erreur fopen() ");
-
-			// RECEPTION DU RESULTAT DE GET
-			memset(msgRecv.content, 0, sizeof(msgRecv.content));
-			int res_recv = msg_recv(localSocket, &msgRecv);
-
-			// On se place à l'endroit où il faut écrire
-			fseek(fichier, nbCarRecuTotal, SEEK_SET);
-			fwrite(contenuFichier, 1, nbCarRecu, fichier);*/
 
 		}
 		else{
