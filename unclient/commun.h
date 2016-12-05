@@ -26,23 +26,26 @@
 #include <dirent.h>
 
 
-// ##############################
-// ######### CONSTANTES #########
-// ##############################
+// ##################################
+// #########   CONSTANTES   #########
+// ##################################
 
+// Taille du buffer d'un message
 #define SIZE_BUFFER_CONTENT 2048
 
-// COMMANDES
+// Commandes disponibles pour un message
 #define BEGIN 0
 #define GETLIST 1
 #define GET 2
 #define SIZE 3
 #define ERROR 4
-#define CONTENT_FILE 5
+#define ACK_SIZE 5
+#define CONTENT_FILE 6
 
-// ##############################
-// ######### STRUCTURES #########
-// ##############################
+
+// ##################################
+// #########   STRUCTURES   #########
+// ##################################
 
 struct msg {
   unsigned int size; // taille du message entier
@@ -51,9 +54,9 @@ struct msg {
 };
 
 
-// ##############################
-// ######### FONCTIONS ##########
-// ##############################
+// ##################################
+// #########   FONCTIONS   ##########
+// ##################################
 
 int msg_send(int fd_circuitV, struct msg* m_send, int onlyContent);
 int msg_recv(int fd_circuitV, struct msg* m_recv, int onlyContent);

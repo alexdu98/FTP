@@ -7,9 +7,9 @@ int main(int argc, char **argv){
 		return EXIT_FAILURE;
 	}
 
-	// ###############################
-	// ## DECLARATION DES VARIABLES ##
-	// ###############################
+	// #########################################
+	// #####   DECLARATION DES VARIABLES   #####
+	// #########################################
 
 	struct hostent *host;
 	struct in_addr **ip;
@@ -27,10 +27,7 @@ int main(int argc, char **argv){
 	int sizeSend;
 	
 
-
-	/*
-		Récupère l'IP à partir d'un nom de domaine
-	*/
+	// Récupère l'IP à partir d'un nom de domaine
 	if((host = gethostbyname(argv[1])) == NULL){
 		perror("Erreur gethostbyname() ");
 		return EXIT_FAILURE;
@@ -38,22 +35,18 @@ int main(int argc, char **argv){
 	ip = (struct in_addr **) host->h_addr_list;
 	realIP = inet_ntoa(*ip[0]);
 
-	/*
-		Création de la socket TCP
-	*/
-	
+	// Création de la socket TCP
 	if((localSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
 		perror("Erreur socket() ");
 		return EXIT_FAILURE;
 	}
-
-	/*
-		Connexion à la socket
-	*/
 	
+	// Configuration de la socket
 	clientAddr.sin_family = AF_INET;
 	clientAddr.sin_addr.s_addr = inet_addr(realIP);
 	clientAddr.sin_port = htons(atoi(argv[2]));
+
+	// Connexion à la socket distante
 	if(connect(localSocket, (struct sockaddr *) &clientAddr, sizeof clientAddr) == -1){
 		perror("Erreur connect() ");
 		return EXIT_FAILURE;
@@ -61,7 +54,6 @@ int main(int argc, char **argv){
 
 	printf("En attente de connexion... \n");
 
-	memset(msgRecv.content, 0, sizeof(msgRecv.content));
 	int res_recv = msg_recv(localSocket, &msgRecv, 0);
 	
 	if(msgRecv.cmd != BEGIN){
@@ -153,6 +145,7 @@ int main(int argc, char **argv){
 
 			char* file = strtok(copyFiles, " ");
 			while(file != NULL){
+				msgSend.cmd = GET;
 				strcpy(msgSend.content, file);
 				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd) + strlen(msgSend.content);
 
@@ -167,6 +160,11 @@ int main(int argc, char **argv){
 				}
 				
 				unsigned int tailleFichier = atoi(msgRecv.content);
+
+				// ENVOI DE LA CMD ACK_SIZE
+				msgSend.cmd = ACK_SIZE;
+				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
+				ret_m_send = msg_send(localSocket, &msgSend, 0);
 
 				printf("\nTaille du fichier %s : %d \n", file, tailleFichier);
 
@@ -197,6 +195,7 @@ int main(int argc, char **argv){
 						msgRecv.size = sizeof(msgRecv.content);
 
 					int res_recv = msg_recv(localSocket, &msgRecv, onlyContent);
+					//printf("> %d \n", res_recv);
 					
 					fseek(fichier, carFseek, SEEK_SET);
 					unsigned int resfw = 0;
@@ -209,7 +208,18 @@ int main(int argc, char **argv){
 					if(nbCarALire > tailleFichier)
 						nbCarALire = tailleFichier;
 
+					// printf("#%c\n", msgRecv.content[nbCarALire - 9]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 8]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 7]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 6]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 5]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 4]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 3]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 2]);
+					// printf("#%c\n", msgRecv.content[nbCarALire - 1]);
+					// printf("%d \n", nbCarALire);
 					resfw = fwrite(msgRecv.content, 1, nbCarALire, fichier);
+					//printf(">> %d \n", resfw);
 
 					test += resfw;
 					

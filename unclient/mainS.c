@@ -123,6 +123,10 @@ int main(int argc, char * argv[]) {
           online = 0;
         }
 
+        printf("RECV :\n");
+        printf("size : %d \n", m_recv.size);
+        printf("cmd : %d \n", m_recv.cmd);
+
         /* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
         switch (m_recv.cmd) {
         case GETLIST:
@@ -184,6 +188,14 @@ int main(int argc, char * argv[]) {
 
             printf("sent (%d/%d) [%s] \n", ret_m_send, m_send.size, m_send.content);
 
+            char nomF[255]; strcpy(nomF, m_recv.content);
+
+            int res_recv = msg_recv(fd_circuitV, &m_recv, 0);
+            if(m_recv.cmd != ACK_SIZE){
+              printf("Erreur : cmd %d attendu, cmd %d recu \n", ACK_SIZE, m_recv.cmd);
+              continue;
+            }
+
             unsigned int nbCarEnvTotal = 0;
             unsigned int carFseek = 0;
             unsigned int test = 0;
@@ -203,6 +215,16 @@ int main(int argc, char * argv[]) {
                 carFseek -= sizeof(m_send.size) + sizeof(m_send.cmd);
               }
 
+              // printf("#%c\n", m_send.content[m_send.size - 9]);
+              // printf("#%c\n", m_send.content[m_send.size - 8]);
+              // printf("#%c\n", m_send.content[m_send.size - 7]);
+              // printf("#%c\n", m_send.content[m_send.size - 6]);
+              // printf("#%c\n", m_send.content[m_send.size - 5]);
+              // printf("#%c\n", m_send.content[m_send.size - 4]);
+              // printf("#%c\n", m_send.content[m_send.size - 3]);
+              // printf("#%c\n", m_send.content[m_send.size - 2]);
+              // printf("#%c\n", m_send.content[m_send.size - 1]);
+              // printf("%d \n", m_send.size);
               ret_m_send = msg_send(fd_circuitV, &m_send, onlyContent);
               nbCarEnvTotal += ret_m_send;
               carFseek += ret_m_send;
@@ -213,7 +235,7 @@ int main(int argc, char * argv[]) {
 
             fclose(fichier);
 
-            printf("Le fichier %s a bien ete transmis. \n", m_recv.content);
+            printf("Le fichier %s a bien ete transmis. \n", nomF);
 
           break;
         }
