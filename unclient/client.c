@@ -1,4 +1,4 @@
-#include "serveur.c"
+#include "client.h"
 
 // Affiche les commandes disponibles
 void afficherCommandes(){

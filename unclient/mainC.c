@@ -25,7 +25,11 @@ int main(int argc, char **argv){
 	int sizeRcv = 0;
 	int sizeSendTotal = 0;
 	int sizeSend;
-	
+
+
+	// #########################################
+	// ########   INIT DE LA CONNEXION   #######
+	// #########################################
 
 	// Récupère l'IP à partir d'un nom de domaine
 	if((host = gethostbyname(argv[1])) == NULL){
@@ -54,8 +58,10 @@ int main(int argc, char **argv){
 
 	printf("En attente de connexion... \n");
 
-	int res_recv = msg_recv(localSocket, &msgRecv, 0);
 	
+	int res_recv = msg_recv(localSocket, &msgRecv, 0);
+
+	// Si la première commande n'est pas BEGIN, connexion refusée
 	if(msgRecv.cmd != BEGIN){
 		printf("Connexion refusee, veuillez reessayer plus tard \n");
 		close(localSocket);
@@ -64,21 +70,29 @@ int main(int argc, char **argv){
 
 	printf("Connexion acceptee \n");
 
+
+	// #########################################
+	// ##########   BOUCLE PRINCIPALE   ########
+	// #########################################
+
 	while(1){
 
 		memset(cmd, 0, sizeof(cmd));
 
 		printf("\nEntrez une commande (HELP pour avoir la liste) : \n");
 
+		// Demande au client de rentrer une commande
 		fgets(cmd, sizeof(cmd), stdin);
 		if(cmd[0] == '\n') break;
 		cmd[strlen(cmd) - 1] = '\0';
 
+		// Affiche les commandes disponibles
 		if(strcmp(cmd, "HELP") == 0){
 
 			afficherCommandes();
 
 		}
+		// Ferme la socket et quitte le programme
 		else if(strcmp(cmd, "QUIT") == 0){
 			shutdown(localSocket, SHUT_RDWR);
 			close(localSocket);
@@ -88,55 +102,79 @@ int main(int argc, char **argv){
 			break;
 
 		}
+		// Affiche la liste des fichiers disponibles sur le serveur
 		else if(strcmp(cmd, "GETLIST") == 0){
 			
 			msgSend.cmd = GETLIST;
+			// Pas de contenu
 			msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
 
-			// ENVOI DE LA CMD GETLIST
 			int ret_m_send = msg_send(localSocket, &msgSend, 0);
 
-			// RECEPTION DU RESULTAT DE GETLIST
 			memset(msgRecv.content, 0, sizeof(msgRecv.content));
 			int res_recv = msg_recv(localSocket, &msgRecv, 0);
 
-			// AFFICHAGE DU RESULTAT
 			printf("\nListe des fichiers du serveur : \n");
 			printf("-------------------------------\n\n");
 			printf("%s\n", msgRecv.content);
 
 		}
+		// Télécharge un ou plusieurs fichiers
 		else if(strncmp(cmd, "GET", 3) == 0){
 
 			msgSend.cmd = GET;
+
+			// Répertoire de destination
 			char DIRLocal[256] = "";
 
+			// Commande client qui sera modifié par strtok
 			char copyCmd[256];
 			strcpy(copyCmd, cmd);
 
+			// Liste des fichiers
 			char copyFiles[256];
 			strcpy(copyFiles, cmd + 4);
 
+			// Découpe la commande sur les espaces
 			char* tabCmdGet = strtok(copyCmd, " ");
 
+			// La taille de la commande entre le GET et le potentiel -DIRL
 			int taille = -6;
+
+			// Tant qu'on a pas inspecter toute la commande découpé
 			while(tabCmdGet != NULL){
+
+				// On ajoute la taille de la partie de la commande découpé
 				taille += strlen(tabCmdGet);
+				
+				// Si la partie découpé contient le paramètre -DIRL
 				if(strcmp(tabCmdGet, "-DIRL") == 0){
+
+					// Place le caractère de fin de chaine pour séparer la liste des fichiers
 					copyFiles[taille] = '\0';
+
+					// Passe à la chaine suivante (répertoire de destination)
 					tabCmdGet = strtok(NULL, " ");
+
 					if(tabCmdGet != NULL){
+
+						// Copie le répertoire de destination dans la chaine
 						strcpy(DIRLocal, tabCmdGet);
+
+						// Si le / de fin n'est pas présent on l'ajoute
 						if(DIRLocal[strlen(DIRLocal)] != '/'){
-			        strcat(DIRLocal, "/");
-			      }
+					        strcat(DIRLocal, "/");
+					    }
 						break;
 					}
+					// Chaine vide -> erreur
 					else{
 						printf("[-DIRL repertoireLocal] \n");
 						break;
 					}
 				}
+
+				// Passe à la chaine suivante
 				tabCmdGet = strtok(NULL, " ");
 			}
 
@@ -170,13 +208,13 @@ int main(int argc, char **argv){
 
 				char nomFichier[255];
 
-        /* Réinitialisation de la variable */
-        memset(nomFichier, 0, sizeof(nomFichier));
+		        /* Réinitialisation de la variable */
+		        memset(nomFichier, 0, sizeof(nomFichier));
 
-        strcpy(nomFichier, DIRLocal);
-        strcat(nomFichier, file);
+		        strcpy(nomFichier, DIRLocal);
+		        strcat(nomFichier, file);
 
-      	/* Fichier à remplir */
+		      	/* Fichier à remplir */
 				FILE* fichier = NULL;
 		
 				/* On créer/ouvre le fichier */
@@ -237,6 +275,7 @@ int main(int argc, char **argv){
 			}
 
 		}
+		// Commande inconnue
 		else{
 
 			printf("Commande inconnue \n");
