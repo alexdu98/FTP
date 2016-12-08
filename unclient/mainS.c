@@ -1,8 +1,6 @@
 #include "serveur.h"
 
-/***********
- *** MAIN
- ***********/
+
 int main(int argc, char * argv[]) {
 
   if(argc > 3 || argc < 2 || (atoi(argv[1]) != 0 && atoi(argv[1]) <= 1024)){
@@ -106,7 +104,7 @@ int main(int argc, char * argv[]) {
       m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
       m_send.cmd = BEGIN;
 
-      ret_m_send = msg_send(fd_circuitV, &m_send, 0);
+      ret_m_send = msg_send(fd_circuitV, &m_send, SERVEUR);
       if (ret_m_send == 0) { // Le client s'est deconnecte
         nb_clients--;
         online = 0;
@@ -117,15 +115,16 @@ int main(int argc, char * argv[]) {
 
         printf("\n");
 
-        int res_recv = msg_recv(fd_circuitV, &m_recv, 0);
+        int res_recv = msg_recv(fd_circuitV, &m_recv, SERVEUR);
         if(res_recv == 0){
           nb_clients--;
           online = 0;
+          break;
         }
 
-        printf("RECV :\n");
-        printf("size : %d \n", m_recv.size);
-        printf("cmd : %d \n", m_recv.cmd);
+        //printf("RECV :\n");
+        //printf("size : %d \n", m_recv.size);
+        //printf("cmd : %d \n", m_recv.cmd);
 
         /* TRAITEMENT DE LA CMD ET RENVOI DU RESULTAT */
         switch (m_recv.cmd) {
@@ -140,7 +139,7 @@ int main(int argc, char * argv[]) {
 
           m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
 
-          ret_m_send = msg_send(fd_circuitV, &m_send, 0);
+          ret_m_send = msg_send(fd_circuitV, &m_send, SERVEUR);
 
           if (ret_m_send == 0) { // Le client s'est deconnecte
             nb_clients--;
@@ -184,13 +183,15 @@ int main(int argc, char * argv[]) {
             }
 
             m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
-            ret_m_send = msg_send(fd_circuitV, &m_send, 0);
+            ret_m_send = msg_send(fd_circuitV, &m_send, SERVEUR);
 
             printf("sent (%d/%d) [%s] \n", ret_m_send, m_send.size, m_send.content);
 
+            if(m_send.cmd == ERROR) continue;
+
             char nomF[255]; strcpy(nomF, m_recv.content);
 
-            int res_recv = msg_recv(fd_circuitV, &m_recv, 0);
+            int res_recv = msg_recv(fd_circuitV, &m_recv, SERVEUR);
             if(m_recv.cmd != ACK_SIZE){
               printf("Erreur : cmd %d attendu, cmd %d recu \n", ACK_SIZE, m_recv.cmd);
               continue;
@@ -208,12 +209,12 @@ int main(int argc, char * argv[]) {
               unsigned int resfr = fread(m_send.content, 1, sizeof(m_send.content), fichier);
               m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + resfr;
 
-              if(onlyContent > 0){
+              /*if(onlyContent > 0){
                 m_send.size = resfr;
               }
               else{
                 carFseek -= sizeof(m_send.size) + sizeof(m_send.cmd);
-              }
+              }*/
 
               // printf("#%c\n", m_send.content[m_send.size - 9]);
               // printf("#%c\n", m_send.content[m_send.size - 8]);
@@ -225,12 +226,12 @@ int main(int argc, char * argv[]) {
               // printf("#%c\n", m_send.content[m_send.size - 2]);
               // printf("#%c\n", m_send.content[m_send.size - 1]);
               // printf("%d \n", m_send.size);
-              ret_m_send = msg_send(fd_circuitV, &m_send, onlyContent);
+              ret_m_send = msg_send(fd_circuitV, &m_send, SERVEUR);
               nbCarEnvTotal += ret_m_send;
-              carFseek += ret_m_send;
+              carFseek += ret_m_send - (sizeof(m_send.size) + sizeof(m_send.cmd));
               test += ret_m_send;
 
-              onlyContent++;
+              // onlyContent = 1;
             }
 
             fclose(fichier);

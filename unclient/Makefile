@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -c
-LFLAGS = 
+LFLAGS = -Wall
 OBJS_CLIENT = mainC.o client.o commun.o
 OBJS_SERVER = mainS.o serveur.o commun.o 
 

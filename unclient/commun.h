@@ -33,6 +33,10 @@
 // Taille du buffer d'un message
 #define SIZE_BUFFER_CONTENT 2048
 
+// Identifiant des appelants pour les msg_senc et msg_recv
+#define SERVEUR 0
+#define CLIENT 1
+
 // Commandes disponibles pour un message
 #define BEGIN 0
 #define GETLIST 1
@@ -41,6 +45,7 @@
 #define ERROR 4
 #define ACK_SIZE 5
 #define CONTENT_FILE 6
+#define ACK_CONTENT_FILE 7
 
 
 // ##################################
@@ -58,5 +63,5 @@ struct msg {
 // #########   FONCTIONS   ##########
 // ##################################
 
-int msg_send(int fd_circuitV, struct msg* m_send, int onlyContent);
-int msg_recv(int fd_circuitV, struct msg* m_recv, int onlyContent);
+int msg_send(int fd_circuitV, struct msg* m_send, int appelant);
+int msg_recv(int fd_circuitV, struct msg* m_recv, int appelant);

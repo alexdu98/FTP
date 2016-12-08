@@ -11,20 +11,53 @@ int main(int argc, char **argv){
 	// #####   DECLARATION DES VARIABLES   #####
 	// #########################################
 
+	// Informations sur le serveur
 	struct hostent *host;
+
+	// IP du serveur
 	struct in_addr **ip;
+	char *realIP;
+
+	// Configuration de la socket
 	struct sockaddr_in clientAddr;
+
+	// Message reçu et envoyé
 	struct msg msgSend;
 	struct msg msgRecv;
 
-	char *realIP;
+	// Taille reçu
+	int resRecv;
+
+	// Commande rentré par le client
 	char cmd[256];
 	
+	// Descripteur de la socket
 	int localSocket;
-	int sizeRcvTotal = 0;
-	int sizeRcv = 0;
-	int sizeSendTotal = 0;
-	int sizeSend;
+
+	// Retour du shutdown et close
+	int retShutdown;
+	int retClose;
+
+	// Bouléen de connexion
+	int connecte = 0;
+
+	// Taille du fichier à recevoir
+	unsigned int tailleFichier;
+
+	// Chemin et nom du fichier à créer
+	char pathToOpen[255];
+
+	// Fichier rendu par fopen
+	FILE* fichier;
+
+	// Offset pour le fseek
+	unsigned int offsetFseek;
+
+	// Nombre de caractères à écrire dans le fichier
+	int nbCarALire;
+
+	// Résultat du fwrite, nombre de caractères écrit
+	unsigned int resFwrite;
 
 
 	// #########################################
@@ -33,7 +66,7 @@ int main(int argc, char **argv){
 
 	// Récupère l'IP à partir d'un nom de domaine
 	if((host = gethostbyname(argv[1])) == NULL){
-		perror("Erreur gethostbyname() ");
+		perror("Erreur gethostbyname ");
 		return EXIT_FAILURE;
 	}
 	ip = (struct in_addr **) host->h_addr_list;
@@ -41,7 +74,7 @@ int main(int argc, char **argv){
 
 	// Création de la socket TCP
 	if((localSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
-		perror("Erreur socket() ");
+		perror("Erreur socket ");
 		return EXIT_FAILURE;
 	}
 	
@@ -52,75 +85,89 @@ int main(int argc, char **argv){
 
 	// Connexion à la socket distante
 	if(connect(localSocket, (struct sockaddr *) &clientAddr, sizeof clientAddr) == -1){
-		perror("Erreur connect() ");
+		perror("Erreur connect ");
+		if((retClose = close(localSocket)) == -1) perror("Erreur close (connect) ");
 		return EXIT_FAILURE;
 	}
 
 	printf("En attente de connexion... \n");
 
-	
-	int res_recv = msg_recv(localSocket, &msgRecv, 0);
+	resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
 
 	// Si la première commande n'est pas BEGIN, connexion refusée
 	if(msgRecv.cmd != BEGIN){
 		printf("Connexion refusee, veuillez reessayer plus tard \n");
-		close(localSocket);
-		return EXIT_FAILURE;
 	}
-
-	printf("Connexion acceptee \n");
-
+	else{
+		connecte = 1;
+		printf("Connexion acceptee");
+	}
 
 	// #########################################
 	// ##########   BOUCLE PRINCIPALE   ########
 	// #########################################
 
-	while(1){
+	while(connecte){
 
 		memset(cmd, 0, sizeof(cmd));
 
-		printf("\nEntrez une commande (HELP pour avoir la liste) : \n");
+		printf("\n\nEntrez une commande (HELP pour avoir la liste) : \n");
 
 		// Demande au client de rentrer une commande
 		fgets(cmd, sizeof(cmd), stdin);
-		if(cmd[0] == '\n') break;
+
+		// Si la commande est vide on ferme le programme
+		if(cmd[0] == '\n'){
+			strcpy(cmd, "QUIT "); // Ne pas enlevé l'espace !
+		}
+
+		// On remplace le \n ou l'espace par \0
 		cmd[strlen(cmd) - 1] = '\0';
 
-		// Affiche les commandes disponibles
+		// #########################################
+		// ##############   CMD HELP   #############
+		// #########################################
 		if(strcmp(cmd, "HELP") == 0){
 
 			afficherCommandes();
 
 		}
-		// Ferme la socket et quitte le programme
+		// #########################################
+		// ##############   CMD QUIT   #############
+		// #########################################
 		else if(strcmp(cmd, "QUIT") == 0){
-			shutdown(localSocket, SHUT_RDWR);
-			close(localSocket);
-			printf("\nAu revoir :)\n");
-			printf("------------\n");
-			printf("\n");
+
 			break;
 
 		}
-		// Affiche la liste des fichiers disponibles sur le serveur
+		// #########################################
+		// ############   CMD GETLIST   ############
+		// #########################################
 		else if(strcmp(cmd, "GETLIST") == 0){
 			
-			msgSend.cmd = GETLIST;
 			// Pas de contenu
 			msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
+			msgSend.cmd = GETLIST;
 
-			int ret_m_send = msg_send(localSocket, &msgSend, 0);
+			msg_send(localSocket, &msgSend, CLIENT);
 
-			memset(msgRecv.content, 0, sizeof(msgRecv.content));
-			int res_recv = msg_recv(localSocket, &msgRecv, 0);
+			resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
+
+			// Si la première commande n'est pas BEGIN, connexion refusée
+			if(msgRecv.cmd != GETLIST){
+				printf("Erreur : commande attendu = %d / reçu = %d \n", GETLIST, msgRecv.cmd);
+				continue;
+			}
 
 			printf("\nListe des fichiers du serveur : \n");
 			printf("-------------------------------\n\n");
-			printf("%s\n", msgRecv.content);
+			printf("%s", msgRecv.content);
 
 		}
-		// Télécharge un ou plusieurs fichiers
-		else if(strncmp(cmd, "GET", 3) == 0){
+		// #########################################
+		// ##############   CMD GET   ##############
+		// #########################################
+		else if(strncmp(cmd, "GET ", 4) == 0){
 
 			msgSend.cmd = GET;
 
@@ -139,9 +186,9 @@ int main(int argc, char **argv){
 			char* tabCmdGet = strtok(copyCmd, " ");
 
 			// La taille de la commande entre le GET et le potentiel -DIRL
-			int taille = -6;
+			int taille = -7;
 
-			// Tant qu'on a pas inspecter toute la commande découpé
+			// Tant qu'on a pas inspecter toute la commande découpée
 			while(tabCmdGet != NULL){
 
 				// On ajoute la taille de la partie de la commande découpé
@@ -163,13 +210,14 @@ int main(int argc, char **argv){
 
 						// Si le / de fin n'est pas présent on l'ajoute
 						if(DIRLocal[strlen(DIRLocal)] != '/'){
-					        strcat(DIRLocal, "/");
-					    }
+				      strcat(DIRLocal, "/");
+				    }
+
 						break;
 					}
 					// Chaine vide -> erreur
 					else{
-						printf("[-DIRL repertoireLocal] \n");
+						printf("[-DIRL <repertoireLocal>] \n");
 						break;
 					}
 				}
@@ -178,104 +226,113 @@ int main(int argc, char **argv){
 				tabCmdGet = strtok(NULL, " ");
 			}
 
+			// Si pas de répertoire indiqué, on prend le courant
 			if(strcmp(DIRLocal,"") == 0)
 				strcpy(DIRLocal, "./");
 
+			// Affichage du répertoire de téléchargement local
+			printf("Repertoire de telechargement : %s \n", DIRLocal);
+
+			// Découpe la liste de fichiers sur les espaces
 			char* file = strtok(copyFiles, " ");
+
+			printf("'%s' \n", copyFiles);
+
+			// Tant qu'on a pas inspecter toute la liste de fichiers
 			while(file != NULL){
-				msgSend.cmd = GET;
+				
+				// On met le nom du fichier dans le contenu
 				strcpy(msgSend.content, file);
 				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd) + strlen(msgSend.content);
+				msgSend.cmd = GET;
 
-				// ENVOI DE LA CMD GET
-				int ret_m_send = msg_send(localSocket, &msgSend, 0);
+				msg_send(localSocket, &msgSend, CLIENT);
 
-				// RECEPTION DE LA TAILLE DU FICHIER OU DE L'ERREUR
-				int res_recv = msg_recv(localSocket, &msgRecv, 0);
+				resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
+
+				// Si on reçoit une erreur
 				if(msgRecv.cmd == ERROR){
-					printf("Erreur : %s \n", msgRecv.content);
+					printf("\nErreur : %s \n", msgRecv.content);
+					// Passe au fichier suivant
+					file = strtok(NULL, " ");
+					continue;
+				}
+				// Si on reçoit une commande différente de GET
+				else if(msgRecv.cmd != SIZE){
+					printf("\nErreur : commande attendu = %d / reçu = %d \n", SIZE, msgRecv.cmd);
+					// Passe au fichier suivant
+					file = strtok(NULL, " ");
 					continue;
 				}
 				
-				unsigned int tailleFichier = atoi(msgRecv.content);
-
-				// ENVOI DE LA CMD ACK_SIZE
-				msgSend.cmd = ACK_SIZE;
-				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
-				ret_m_send = msg_send(localSocket, &msgSend, 0);
+				// Transformation de la chaine en entier
+				tailleFichier = atoi(msgRecv.content);
 
 				printf("\nTaille du fichier %s : %d \n", file, tailleFichier);
 
-				char nomFichier[255];
+				// Accusé de récéption, pas de contenu
+				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
+				msgSend.cmd = ACK_SIZE;
+				msg_send(localSocket, &msgSend, CLIENT);
 
-		        /* Réinitialisation de la variable */
-		        memset(nomFichier, 0, sizeof(nomFichier));
+				// On copie le chemin du répertoire de destination
+        strcpy(pathToOpen, DIRLocal);
 
-		        strcpy(nomFichier, DIRLocal);
-		        strcat(nomFichier, file);
+        // On concatene le nom du fichier
+        strcat(pathToOpen, file);
 
-		      	/* Fichier à remplir */
-				FILE* fichier = NULL;
+				fichier = NULL;
 		
-				/* On créer/ouvre le fichier */
-				if((fichier = fopen(nomFichier, "wb+")) == NULL)
-					perror("Erreur fopen() ");
-
-				unsigned int nbCarRecuTotal = 0;
-				unsigned int carFseek = 0;
-				unsigned int test = 0;
-				int nbCarALire = 0;
-				int onlyContent = 0;
-				while(test < tailleFichier){
-
-					msgRecv.size = (tailleFichier + sizeof(msgRecv.size) + sizeof(msgRecv.cmd)) - nbCarRecuTotal;
-					if(msgRecv.size > sizeof(msgRecv.content))
-						msgRecv.size = sizeof(msgRecv.content);
-
-					int res_recv = msg_recv(localSocket, &msgRecv, onlyContent);
-					//printf("> %d \n", res_recv);
-					
-					fseek(fichier, carFseek, SEEK_SET);
-					unsigned int resfw = 0;
-
-					nbCarALire = sizeof(msgRecv.content);
-					
-					if(msgRecv.size < sizeof(msgRecv.content)){
-						nbCarALire = msgRecv.size;
-					}
-					if(nbCarALire > tailleFichier)
-						nbCarALire = tailleFichier;
-
-					// printf("#%c\n", msgRecv.content[nbCarALire - 9]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 8]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 7]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 6]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 5]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 4]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 3]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 2]);
-					// printf("#%c\n", msgRecv.content[nbCarALire - 1]);
-					// printf("%d \n", nbCarALire);
-					resfw = fwrite(msgRecv.content, 1, nbCarALire, fichier);
-					//printf(">> %d \n", resfw);
-
-					test += resfw;
-					
-					carFseek += resfw;
-					nbCarRecuTotal += res_recv;
-				
-					onlyContent++;
+				// Création/Ouverture du fichier
+				if((fichier = fopen(pathToOpen, "wb+")) == NULL){
+					perror("Erreur fopen ");
+					// Passe au fichier suivant
+					file = strtok(NULL, " ");
+					continue;
 				}
 
-				fclose(fichier);
+				offsetFseek = 0;
+				while(offsetFseek < tailleFichier){
+
+					resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
+
+					// Si on reçoit une commande différente de CONTENT_FILE
+					if(msgRecv.cmd != CONTENT_FILE){
+						printf("Erreur : commande attendu = %d / reçu = %d \n", CONTENT_FILE, msgRecv.cmd);
+						break;
+					}
+					
+					// Place le curseur pour la prochaine écriture
+					if(fseek(fichier, offsetFseek, SEEK_SET) == -1){
+						perror("Erreur fseek ");
+						break;
+					}
+
+					// Nombre de caractères à écrire dans le fichier
+					nbCarALire = resRecv - sizeof(msgRecv.size) - sizeof(msgRecv.cmd);
+
+					// Ecriture dans le fichier
+					resFwrite = fwrite(msgRecv.content, 1, nbCarALire, fichier);
+					
+					// Decale l'offset
+					offsetFseek += resFwrite;
+				}
+
+				if(fclose(fichier) == EOF){
+					perror("Erreur fclose ");
+					break;
+				}
 
 				printf("Le fichier %s a bien ete telecharge \n", file);
 
+				// Passe au fichier suivant
 				file = strtok(NULL, " ");
 			}
 
 		}
-		// Commande inconnue
+		// #########################################
+		// ############   CMD INCONNUE   ###########
+		// #########################################
 		else{
 
 			printf("Commande inconnue \n");
@@ -284,7 +341,13 @@ int main(int argc, char **argv){
 
 	}
 
-	close(localSocket);
+	// Fermeture de la socket
+	if((retShutdown = shutdown(localSocket, SHUT_RDWR)) == -1) perror("Erreur shutdown (main) ");
+	if((retClose = close(localSocket)) == -1) perror("Erreur close (main) ");
+
+	printf("\nAu revoir :)\n");
+	printf("------------\n");
+	printf("\n");
 
 	return EXIT_SUCCESS;
 }
