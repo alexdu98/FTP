@@ -6,5 +6,5 @@ void afficherCommandes(){
 	printf("----------------------- \n\n");
 	printf("GETLIST \n - Retourne la liste des fichiers telechargeables du serveur \n\n");
 	printf("GET <fichier1> [<fichier2> ...] [-DIRL <repertoireLocal>] \n - Telecharge le(s) fichier(s) fichierX dans repertoireLocal (./ si vide) \n\n");
-	printf("QUIT \n - Quitte le programme \n\n");
+	printf("QUIT \n - Quitte le programme \n");
 }

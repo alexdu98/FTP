@@ -236,8 +236,6 @@ int main(int argc, char **argv){
 			// Découpe la liste de fichiers sur les espaces
 			char* file = strtok(copyFiles, " ");
 
-			printf("'%s' \n", copyFiles);
-
 			// Tant qu'on a pas inspecter toute la liste de fichiers
 			while(file != NULL){
 				
@@ -259,7 +257,7 @@ int main(int argc, char **argv){
 				}
 				// Si on reçoit une commande différente de GET
 				else if(msgRecv.cmd != SIZE){
-					printf("\nErreur : commande attendu = %d / reçu = %d \n", SIZE, msgRecv.cmd);
+					printf("\nErreur : commande attendu = %d / recu = %d \n", SIZE, msgRecv.cmd);
 					// Passe au fichier suivant
 					file = strtok(NULL, " ");
 					continue;
@@ -296,7 +294,7 @@ int main(int argc, char **argv){
 
 					resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
 
-					// Si on reçoit une commande différente de CONTENT_FILE
+					// Sinon si on reçoit une commande différente de CONTENT_FILE
 					if(msgRecv.cmd != CONTENT_FILE){
 						printf("Erreur : commande attendu = %d / reçu = %d \n", CONTENT_FILE, msgRecv.cmd);
 						break;
@@ -316,12 +314,19 @@ int main(int argc, char **argv){
 					
 					// Decale l'offset
 					offsetFseek += resFwrite;
+
 				}
 
 				if(fclose(fichier) == EOF){
 					perror("Erreur fclose ");
 					break;
 				}
+
+				// Envoi de l'accusé de récéption du fichier
+				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
+				msgSend.cmd = ACK_CONTENT_FILE;
+
+				msg_send(localSocket, &msgSend, CLIENT);
 
 				printf("Le fichier %s a bien ete telecharge \n", file);
 
