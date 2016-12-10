@@ -3,7 +3,7 @@
 int main(int argc, char **argv){
 
 	if(argc != 3){
-		printf("Usage : mainC IPServeur|NDDServeur PortServeur \n");
+		printf("Usage : mainC <IPServeur|NDDServeur> <PortServeur> \n");
 		return EXIT_FAILURE;
 	}
 
@@ -314,7 +314,6 @@ int main(int argc, char **argv){
 					
 					// Decale l'offset
 					offsetFseek += resFwrite;
-
 				}
 
 				if(fclose(fichier) == EOF){

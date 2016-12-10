@@ -3,7 +3,7 @@
 int main(int argc, char * argv[]) {
 
   if(argc > 3 || argc < 2 || (atoi(argv[1]) != 0 && atoi(argv[1]) <= 1024)){
-    printf("Usage : mainS port(0 = rand, > 1024) [repertoireDL] \n");
+    printf("Usage : mainS <port>(0 = rand, > 1024) [repertoireDL] \n");
     return EXIT_FAILURE;
   }
 
@@ -91,6 +91,7 @@ int main(int argc, char * argv[]) {
   fd_brPublique = socket(PF_INET, SOCK_STREAM, 0);
   if (fd_brPublique == -1) {
     perror("Erreur socket ");
+    exit(EXIT_FAILURE);
   }
 
   // Configuration de la socket
@@ -101,6 +102,7 @@ int main(int argc, char * argv[]) {
   // Liaison de la socket et de la structure
   if(bind(fd_brPublique, (struct sockaddr * ) & brPublique, sizeof(brPublique)) == -1){
     perror("Erreur bind ");
+    exit(EXIT_FAILURE);
   }
 
   // Affiche le numéro de port pour les clients
@@ -111,6 +113,7 @@ int main(int argc, char * argv[]) {
   // Création d'une file d'attente des connexions
   if(listen(fd_brPublique, LG_FILE_ATTENTE) == -1){
     perror("Erreur listen ");
+    exit(EXIT_FAILURE);
   }
 
   // #########################################

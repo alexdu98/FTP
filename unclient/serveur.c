@@ -85,6 +85,9 @@ char* lstattoa(char* path_to_file, char* name){
 	if(ret_sprintf == -1) perror("sprintf lstattoa ");
 	else strcpy(file_infos, strcat(file_infos, file_size));
 
+	if((int)file.st_size < 10000)
+    strcpy(file_infos, strcat(file_infos, "\t"));
+
 	strcpy(file_infos, strcat(file_infos, "\t"));
 	strcpy(file_infos, strcat(file_infos, name));
 	strcpy(file_infos, strcat(file_infos, "\n"));

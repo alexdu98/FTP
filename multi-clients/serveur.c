@@ -22,6 +22,39 @@ int pop_file (int* file, int fin_de_file) {
 
 /*********************************
  *********************************
+ *    FONCTION THREAD SERVEUR    *
+ *********************************
+ *********************************/
+void* thread_console_serveur(void *args){
+
+  char cmd[256];
+  struct cpt_args* my_props = (struct cpt_args*) args;
+
+  while(1){
+    memset(cmd, 0, sizeof(cmd));
+
+    printf("\n\n> Appuyez sur la touche entree pour voir le compteur de telechargement...\n\n");
+
+    fgets(cmd, sizeof(cmd), stdin);
+
+    // Il ne faut pas que les threads essayent de lire/écrire en même temps sur le nombre de téléchargement d'un fichier
+    int ret_m_lock = pthread_mutex_lock(&(my_props->lock_cpt));
+    if(ret_m_lock != 0)
+      perror("mutex lock nb clients inc ");
+
+    // Affiche le nombre de téléchargement par fichier
+    getDl(my_props->cpt, *my_props->nbFiles);
+
+    int ret_m_unlock = pthread_mutex_unlock(&(my_props->lock_cpt));
+    if(ret_m_unlock != 0)
+      perror("mutex unlock nb clients inc ");
+  }
+
+  pthread_exit(NULL);
+}
+
+/*********************************
+ *********************************
  *     FONCTION THREAD CLIENT    *
  *********************************
  *********************************/
@@ -56,7 +89,6 @@ void* thread_client (void* args) {
   // Client connecté = 1, déconnecté = 0
   int connecte;
 
-  
   printf("Un client vient de se connecter. (socket : %d) \n", my_props->fd_circuitV);
   connecte = 1;
 
@@ -73,8 +105,6 @@ void* thread_client (void* args) {
 
   while(connecte) {
 
-    printf("\n");
-
     // Si le client s'est déconnecté
     if(msg_recv(my_props->fd_circuitV, &m_recv, SERVEUR) == 0) break;
 
@@ -83,7 +113,7 @@ void* thread_client (void* args) {
     // #########################################
     if(m_recv.cmd == GETLIST){
         
-      printf("CMD : GETLIST \n");
+      printf("CMD : GETLIST (socket : %d) \n", my_props->fd_circuitV);
 
       // Récupération des informations des fichiers du répertoire de téléchargement
       listdir(s_vars->path_to_storage_dir, m_send.content);
@@ -94,14 +124,14 @@ void* thread_client (void* args) {
       // Si le client s'est déconnecté
       if(msg_send(my_props->fd_circuitV, &m_send, SERVEUR) == 0) break;
 
-      printf("GETLIST sent \n");
+      printf("GETLIST sent (socket : %d) \n", my_props->fd_circuitV);
     }
     // #########################################
     // ##############   CMD GET   ##############
     // #########################################
     else if(m_recv.cmd == GET){
 
-      printf("CMD : GET (%s) \n", m_recv.content);
+      printf("CMD : GET (%s) (socket : %d) \n", m_recv.content, my_props->fd_circuitV);
 
       // Copie le nom du fichier
       strcpy(nomFichier, m_recv.content);
@@ -114,17 +144,17 @@ void* thread_client (void* args) {
 
       // Si on ne peut pas accéder au fichier on envoit l'erreur
       if((fichier = fopen(cheminFichier, "rb")) == NULL){
-	m_send.cmd = ERROR;
-	strcpy(m_send.content, m_recv.content);
-	strcat(m_send.content, " -> ");
-	strcat(m_send.content, strerror(errno));
+      	m_send.cmd = ERROR;
+      	strcpy(m_send.content, m_recv.content);
+      	strcat(m_send.content, " -> ");
+      	strcat(m_send.content, strerror(errno));
       }
       // S'il n'y a pas d'erreur on envoit la taille du fichier
       else{
-	m_send.cmd = SIZE;
-	fseek(fichier, 0, SEEK_END);
-	tailleFichier = ftell(fichier);
-	sprintf(m_send.content, "%u", tailleFichier);
+      	m_send.cmd = SIZE;
+      	fseek(fichier, 0, SEEK_END);
+      	tailleFichier = ftell(fichier);
+      	sprintf(m_send.content, "%u", tailleFichier);
       }
 
       m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
@@ -133,7 +163,7 @@ void* thread_client (void* args) {
       if(msg_send(my_props->fd_circuitV, &m_send, SERVEUR) == 0) break;
 
       // Affiche la taille du fichier, ou l'erreur
-      printf("Contenu envoye (size ou erreur) : %s \n", m_send.content);
+      printf("Contenu envoye (size ou erreur) (socket : %d) : %s \n", my_props->fd_circuitV, m_send.content);
 
       // S'il y a eu une erreur on passe à la commande suivante
       if(m_send.cmd == ERROR) continue;
@@ -143,8 +173,8 @@ void* thread_client (void* args) {
 
       // Si la commande n'est pas l'accusé de récéption de la taille du fichier
       if(m_recv.cmd != ACK_SIZE){
-	printf("Erreur : cmd %d attendu, cmd %d recu \n", ACK_SIZE, m_recv.cmd);
-	continue;
+      	printf("Erreur : cmd %d attendu, cmd %d recu (socket : %d) \n", ACK_SIZE, m_recv.cmd, my_props->fd_circuitV);
+      	continue;
       }
 
       m_send.cmd = CONTENT_FILE;
@@ -152,33 +182,33 @@ void* thread_client (void* args) {
       offsetFseek = 0;
       while(offsetFseek < tailleFichier){
 
-	// Place le curseur pour la prochaine lecture
-	if(fseek(fichier, offsetFseek, SEEK_SET) == -1){
-	  perror("Erreur fseek ");
-	  break;
-	}
+      	// Place le curseur pour la prochaine lecture
+      	if(fseek(fichier, offsetFseek, SEEK_SET) == -1){
+      	  perror("Erreur fseek ");
+      	  break;
+      	}
 
-	// Lecture du fichier
-	resfr = fread(m_send.content, 1, sizeof(m_send.content), fichier);
+      	// Lecture du fichier
+      	resfr = fread(m_send.content, 1, sizeof(m_send.content), fichier);
 
-	// On envoit la taille que l'on a lu
-	m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + resfr;
+      	// On envoit la taille que l'on a lu
+      	m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + resfr;
 
-	resSend = msg_send(my_props->fd_circuitV, &m_send, SERVEUR);
+      	resSend = msg_send(my_props->fd_circuitV, &m_send, SERVEUR);
 
-	// Si le client s'est déconnecté
-	if(resSend == 0){
-	  connecte = 0;
-	  break;
-	}
+      	// Si le client s'est déconnecté
+      	if(resSend == 0){
+      	  connecte = 0;
+      	  break;
+      	}
 
-	// Decale l'offset
-	offsetFseek += resSend - (sizeof(m_send.size) + sizeof(m_send.cmd));
+      	// Decale l'offset
+      	offsetFseek += resSend - (sizeof(m_send.size) + sizeof(m_send.cmd));
       }
 
       if(fclose(fichier) == EOF){
-	perror("Erreur fclose ");
-	break;
+      	perror("Erreur fclose ");
+      	break;
       }
 
       // Si le client s'était déconnecté
@@ -189,11 +219,18 @@ void* thread_client (void* args) {
 
       // Si la commande n'est pas l'accusé de récéption du fichier
       if(m_recv.cmd != ACK_CONTENT_FILE){
-	printf("Erreur : cmd %d attendu, cmd %d recu \n", ACK_CONTENT_FILE, m_recv.cmd);
-	continue;
+      	printf("Erreur : cmd %d attendu, cmd %d recu (socket : %d) \n", ACK_CONTENT_FILE, m_recv.cmd, my_props->fd_circuitV);
+      	continue;
       }
 
-      printf("Le fichier %s a bien ete transmis. \n", nomFichier);
+      // Il ne faut pas que les threads essayent de lire/écrire en même temps sur le nombre de téléchargement d'un fichier
+      pthread_mutex_lock(&((s_vars->cpt)->lock_cpt));
+
+      addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles);
+
+      pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
+
+      printf("Le fichier %s a bien ete transmis. (socket : %d)\n", nomFichier, my_props->fd_circuitV);
 
     }
     // #########################################
@@ -201,13 +238,109 @@ void* thread_client (void* args) {
     // #########################################
     else{
 
-      printf("Commande inconnue \n");
+      printf("Commande inconnue (socket : %d) \n", my_props->fd_circuitV);
 
     }
   }
 
-  // Pour enlever les warnings
-  return NULL;
+  // Operation en ecriture sur la var partagee nb de clients, var a proteger
+  int ret_m_lock = pthread_mutex_lock(&(s_vars->lock));
+  if(ret_m_lock != 0)
+    perror("mutex lock nb clients inc ");
+
+  // Diminue le nb de clients apres deconnexion
+  s_vars->nb_clients--;
+
+  s_vars->fin_de_file++;
+
+  s_vars->file_places_libres[s_vars->fin_de_file] = my_props->id_client;
+
+  printf("Un client vient de se deconnecter. (socket : %d) \n", my_props->fd_circuitV);
+
+  int ret_m_unlock = pthread_mutex_unlock(&(s_vars->lock));
+  if(ret_m_unlock != 0)
+    perror("mutex unlock nb clients inc ");
+
+  pthread_exit(NULL);
+}
+
+// Compte le nombre de fichier du répertoire path_to_dir
+unsigned int countFiles(const char* path_to_dir){
+
+  unsigned int nb = 0;
+  DIR* dir;
+  struct dirent* entry;
+
+  dir = opendir(path_to_dir);
+  if(dir == NULL) {
+    perror("opendir listdir ");
+  }
+
+  while((entry = readdir(dir)) != NULL) {
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      continue;
+    nb++;
+  }
+
+  return nb;
+}
+
+// Initialise le nombre de téléchargement à 0 pour tous les fichiers
+void setCpt(struct compteur_dl* cpt, const char* path_to_dir){
+
+  int i = 0;
+  DIR* dir;
+  struct dirent* entry;
+
+  dir = opendir(path_to_dir);
+  if(dir == NULL) {
+    perror("opendir listdir ");
+  }
+
+  while((entry = readdir(dir)) != NULL) {
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      continue;
+    strcpy(cpt[i].fichier, entry->d_name);
+    cpt[i].nbDl = 0;
+    i++;
+  }
+}
+
+// Ajoute un téléchargement pour le fichier file, s'il non présent dans le tableau, ajout
+void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
+  for (int i = 0; i < *nbFiles; ++i){
+    if(strcmp(cpt[i].fichier, file) == 0){
+      cpt[i].nbDl++;
+      return;
+    }
+  }
+
+  // Le fichier n'était pas encore dans la liste (ajouté après le lancement du serveur)
+  struct compteur_dl* temp = (struct compteur_dl*)realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
+
+  // Remplace le pointeur de la scruture
+  *cpt = *temp;
+
+  // Ajoute le nom du fichier et le nombre de téléchargement
+  strcpy(cpt[*nbFiles].fichier, file);
+  cpt[*nbFiles].nbDl = 1;
+
+  // Incrémente le nombre de fichier
+  (*nbFiles)++;
+}
+
+// Affiche le nombre de téléchargement pour chaque fichier
+void getDl(struct compteur_dl* cpt, unsigned int nbFiles){
+  printf("\nNombre de telechargement par fichier : \n");
+  printf("-------------------------------\n\n");
+  for (int i = 0; i < nbFiles; ++i){
+    printf("%s \t", cpt[i].fichier);
+
+    if(strlen(cpt[i].fichier) < 7)
+      printf("\t");
+
+    printf(" : %d \n",cpt[i].nbDl);
+  }
 }
 
 // Liste les fichiers du répertoire path_to_dir dans la variable buffer
@@ -295,6 +428,9 @@ char* lstattoa(char* path_to_file, char* name){
   ret_sprintf = sprintf(file_size, "%d", (int)file.st_size);
   if(ret_sprintf == -1) perror("sprintf lstattoa ");
   else strcpy(file_infos, strcat(file_infos, file_size));
+
+  if((int)file.st_size < 10000)
+    strcpy(file_infos, strcat(file_infos, "\t"));
 
   strcpy(file_infos, strcat(file_infos, "\t"));
   strcpy(file_infos, strcat(file_infos, name));

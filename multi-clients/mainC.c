@@ -3,7 +3,7 @@
 int main(int argc, char **argv){
 
 	if(argc != 3){
-		printf("Usage : mainC IPServeur|NDDServeur PortServeur \n");
+		printf("Usage : mainC <IPServeur|NDDServeur> <PortServeur> \n");
 		return EXIT_FAILURE;
 	}
 
@@ -236,8 +236,6 @@ int main(int argc, char **argv){
 			// Découpe la liste de fichiers sur les espaces
 			char* file = strtok(copyFiles, " ");
 
-			printf("'%s' \n", copyFiles);
-
 			// Tant qu'on a pas inspecter toute la liste de fichiers
 			while(file != NULL){
 				
@@ -322,6 +320,12 @@ int main(int argc, char **argv){
 					perror("Erreur fclose ");
 					break;
 				}
+
+				// Envoi de l'accusé de récéption du fichier
+				msgSend.size = sizeof(msgSend.size) + sizeof(msgSend.cmd);
+				msgSend.cmd = ACK_CONTENT_FILE;
+
+				msg_send(localSocket, &msgSend, CLIENT);
 
 				printf("Le fichier %s a bien ete telecharge \n", file);
 

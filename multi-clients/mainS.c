@@ -3,7 +3,7 @@
 int main(int argc, char * argv[]) {
 
   if(argc > 3 || argc < 2 || (atoi(argv[1]) != 0 && atoi(argv[1]) <= 1024)){
-    printf("Usage : mainS port(0 = rand, > 1024) [repertoireDL] \n");
+    printf("Usage : mainS <port>(0 = rand, > 1024) [repertoireDL] \n");
     return EXIT_FAILURE;
   }
 
@@ -35,7 +35,6 @@ int main(int argc, char * argv[]) {
   if(argc == 3){
     if(access(argv[2], F_OK) == 0){
       path_to_storage_dir = argv[2];
-
       if(argv[2][strlen(argv[2]) - 1] != '/'){
         char nomTemp[256];
         strcpy(nomTemp, argv[2]);
@@ -46,7 +45,6 @@ int main(int argc, char * argv[]) {
     else{
       printf("'%s' \n", argv[2]);
       perror("Repertoire de telechargement non valide ");
-
       return EXIT_FAILURE;
     }
   }
@@ -75,6 +73,7 @@ int main(int argc, char * argv[]) {
   // Liaison de la socket et de la structure
   if(bind(fd_brPublique, (struct sockaddr * ) & brPublique, sizeof(brPublique)) == -1){
     perror("Erreur bind ");
+    exit(EXIT_FAILURE);
   }
 
   // Affiche le numéro de port pour les clients
@@ -85,6 +84,7 @@ int main(int argc, char * argv[]) {
   // Création d'une file d'attente des connexions
   if(listen(fd_brPublique, LG_FILE_ATTENTE) == -1){
     perror("Erreur listen ");
+    exit(EXIT_FAILURE);
   }
 
   /****************************************************************
@@ -119,60 +119,83 @@ int main(int argc, char * argv[]) {
   int ret_pth_create = 0, ret_m_lock = 0, ret_m_unlock = 0;
   int ret_shutdown = 0, ret_close = 0;
 
+  // Compte le nombre de fichiers téléchargeable du serveur
+  unsigned int nbFiles = countFiles(path_to_storage_dir);
+
+  // Alloue un tableau de structure du nombre de fichier pour compter le nombre de téléchargement
+  struct compteur_dl* cpt = (struct compteur_dl*)malloc(sizeof(struct compteur_dl) * nbFiles);
+
+  // Initialise à 0 le nombre de téléchargement pour chaque fichier
+  setCpt(cpt, path_to_storage_dir);
+
+  pthread_t console;
+  struct cpt_args cpt_args;
+  cpt_args.cpt = cpt;
+  cpt_args.nbFiles = &nbFiles;
+
+  if(pthread_mutex_init(&(cpt_args.lock_cpt), NULL) != 0)
+    perror("pth mutex init shared vars lock ");
+
+  s_vars.cpt = &cpt_args;
+
+  // Création du thread pour lire la console serveur et afficher le nombre de téléchargement
+  pthread_create(&console, NULL, &thread_console_serveur, (void*)&cpt_args);
+
   // ################################################
   // ##########   BOUCLE LANCEMENT CLIENT   #########
   // ################################################
+
+  printf("\n");
 
   while(1) {
 
     // SI LE SERVEUR PEUT ENCORE ACCEPTER DES CLIENTS
     if (s_vars.nb_clients < NB_MAX_CLIENTS) {
 
-      printf("\nEn attente d'un client...\n");
+      printf("En attente d'un client...\n");
 
       // Acceptation d'une connexion de client
       fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) & brCv, & lgbrCv);
-
       if (fd_circuitV == -1) {
-	perror("accept ");
+	       perror("accept ");
       }
       else { // Traitement normal du client
 
-	// Operation en ecriture sur la var partagee nb de clients, var a proteger
-	ret_m_lock = pthread_mutex_lock(&(s_vars.lock));
-	if(ret_m_lock != 0)
-	  perror("mutex lock nb clients inc ");
+      	// Operation en ecriture sur la var partagee nb de clients, var a proteger
+      	ret_m_lock = pthread_mutex_lock(&(s_vars.lock));
+      	if(ret_m_lock != 0)
+      	  perror("mutex lock nb clients inc ");
 
-	// Augmente le nb de clients apres acceptation
-	s_vars.nb_clients++;
+      	// Augmente le nb de clients apres acceptation
+      	s_vars.nb_clients++;
 
-	// Recupere un num de place libre
-	id_client = pop_file(s_vars.file_places_libres, s_vars.fin_de_file);
+      	// Recupere un num de place libre
+      	id_client = pop_file(s_vars.file_places_libres, s_vars.fin_de_file);
 
-	// la file de places libres avance
-	s_vars.fin_de_file--;
-	
-	ret_m_unlock = pthread_mutex_unlock(&(s_vars.lock));
-	if(ret_m_unlock != 0)
-	  perror("mutex unlock nb clients inc ");
+      	// la file de places libres avance
+      	s_vars.fin_de_file--;
+      	
+      	ret_m_unlock = pthread_mutex_unlock(&(s_vars.lock));
+      	if(ret_m_unlock != 0)
+      	  perror("mutex unlock nb clients inc ");
 
-      
-	// Initialisation des args qui vont etre passes au thread client
-	c_args[id_client].id_client = id_client;
-	c_args[id_client].fd_circuitV = fd_circuitV;
-	c_args[id_client].s_vars = &s_vars;
-	
-	ret_pth_create = pthread_create(&clients[id_client], NULL, &thread_client, (void*)&c_args);
-      
-	if(ret_pth_create != 0) {
-	  perror("pth_create ");
-	  // Envoi msg erreur de traitement au client + shutdown close
-	}
+            
+      	// Initialisation des args qui vont etre passes au thread client
+      	c_args[id_client].id_client = id_client;
+      	c_args[id_client].fd_circuitV = fd_circuitV;
+      	c_args[id_client].s_vars = &s_vars;
+      	
+      	ret_pth_create = pthread_create(&clients[id_client], NULL, &thread_client, (void*)&c_args[id_client]);
+            
+      	if(ret_pth_create != 0) {
+      	  perror("pth_create ");
+      	  // Envoi msg erreur de traitement au client + shutdown close
+      	}
       }
     }
     // SI LE SERVEUR A ATTEINT SA LIMITE DE CLIENTS A TRAITER
     else {
-      // Envoi msg au client, capacite de traitement depasse
+      sleep(1);
     }    
   }
 
@@ -183,6 +206,8 @@ int main(int argc, char * argv[]) {
   // Ferme le descripteur de la socket
   ret_close = close(fd_brPublique);
   if (ret_close == -1) perror("close ");
+
+  free(cpt);
 
   return EXIT_SUCCESS;
 }
