@@ -1,6 +1,6 @@
 #include "commun.h"
 
-/* Envoit un message sur une socket
+/* Envoie un message sur une socket
  *
  * @PARAM fd_circuitV, le descripteur de la socket
  * @PARAM m_send, la struct à envoyer
@@ -27,12 +27,13 @@ int msg_send(int fd_circuitV, struct msg* m_send, int appelant) {
       // S'il y a une erreur
       if(ret_send == -1) {
         perror("Erreur send (msg_send) ");
-        if((ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR)) == -1) perror("Erreur shutdown (msg_send) ");
       }
       // S'il y a une déconnexion inattendue
       else if(ret_send == 0 && appelant == CLIENT) {
-        printf("Connexion fermee par le serveur (msg_send) \n");		       
+        printf("Connexion fermee par le serveur (msg_send) \n");
       }
+
+      if((ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR)) == -1) perror("Erreur shutdown (msg_send) ");
 
       if((ret_close = close(fd_circuitV)) == -1) perror("Erreur close (msg_send) ");
 
@@ -64,6 +65,7 @@ int msg_recv(int fd_circuitV, struct msg* m_recv, int appelant) {
   int r_total_size = 0;
   char *recvPtr = (char *) m_recv;
 
+  // Reception de l'entete du msg : la taille totale et la commande
   while (r_total_size < sizeof(m_recv->size) + sizeof(m_recv->cmd)) {
     
     ret_recv = recv(fd_circuitV, recvPtr + r_total_size, sizeof(m_recv->size) + sizeof(m_recv->cmd) - r_total_size, 0);
@@ -73,12 +75,13 @@ int msg_recv(int fd_circuitV, struct msg* m_recv, int appelant) {
       // S'il y a une erreur
       if(ret_recv == -1) {
         perror("Erreur recv size + cmd (msg_recv) ");
-        if((ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR)) == -1) perror("Erreur shutdown (msg_recv) ");
       }
       // S'il y a une déconnexion inattendue
       else if(ret_recv == 0 && appelant == CLIENT) {
         printf("Connexion fermee par l'hote distant (msg_recv) \n");           
       }
+
+      if((ret_shutdown = shutdown(fd_circuitV, SHUT_RDWR)) == -1) perror("Erreur shutdown (msg_recv) ");
 
       if((ret_close = close(fd_circuitV)) == -1) perror("Erreur close (msg_recv) ");
 

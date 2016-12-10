@@ -3,30 +3,29 @@
 // Liste les fichiers du répertoire path_to_dir dans la variable buffer
 void listdir(const char* path_to_dir, char* buffer){
 
-	DIR* dir;
-	dir = opendir(path_to_dir);
-	if(dir == NULL) {
-		perror("opendir listdir ");
-	}
+  DIR* dir;
+  dir = opendir(path_to_dir);
+  if(dir == NULL) {
+    perror("opendir listdir ");
+  }
 	
-	char path_file[512];
-	struct dirent* entry;
+  char path_file[512];
+  struct dirent* entry;
 
-	strcpy(buffer, "");
+  strcpy(buffer, "");
 
-	while((entry = readdir(dir)) != NULL) {
+  while((entry = readdir(dir)) != NULL) {
 
-		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-			continue;
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      continue;
 
-		strcpy(path_file, path_to_dir);
-		strcat(path_file, "/");
-		strcat(path_file, entry->d_name);
+    strcpy(path_file, path_to_dir);
+    strcat(path_file, "/");
+    strcat(path_file, entry->d_name);
 
-		strcat(buffer, lstattoa(path_file, entry->d_name));
-	}
+    strcat(buffer, lstattoa(path_file, entry->d_name));
+  }
 }
-
 
 // Retourne les informations du fichier name du répertoire path_to_file
 char* lstattoa(char* path_to_file, char* name){

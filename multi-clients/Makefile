@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -c 
+CFLAGS = -c -std=gnu11 -Wall
 LFLAGS = -Wall -lpthread
 OBJS_CLIENT = mainC.o client.o commun.o
 OBJS_SERVER = mainS.o serveur.o commun.o 
 
-all: mainS mainC clean
+all: mainS mainC
 
 .c.o: 
 	$(CC) $(CFLAGS) $<
@@ -16,4 +16,4 @@ mainC: $(OBJS_CLIENT)
 	$(CC) $(OBJS_CLIENT) $(LFLAGS) -o $@ 
 
 clean:
-	rm *.o
+	rm *.o *~ mainC mainS

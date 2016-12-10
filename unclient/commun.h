@@ -33,7 +33,7 @@
 // Taille du buffer d'un message
 #define SIZE_BUFFER_CONTENT 2048
 
-// Identifiant des appelants pour les msg_senc et msg_recv
+// Identifiant des appelants pour les msg_send et msg_recv
 #define SERVEUR 0
 #define CLIENT 1
 
