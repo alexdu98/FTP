@@ -40,12 +40,13 @@
 // Commandes disponibles pour un message
 #define BEGIN 0
 #define GETLIST 1
-#define GET 2
-#define SIZE 3
-#define ERROR 4
-#define ACK_SIZE 5
-#define CONTENT_FILE 6
-#define ACK_CONTENT_FILE 7
+#define ACK_GETLIST 2
+#define GET 3
+#define SIZE 4
+#define ERROR 5
+#define ACK_SIZE 6
+#define CONTENT_FILE 7
+#define ACK_CONTENT_FILE 8
 
 
 // ##################################

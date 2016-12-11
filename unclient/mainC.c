@@ -151,17 +151,24 @@ int main(int argc, char **argv){
 
 			msg_send(localSocket, &msgSend, CLIENT);
 
-			resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
-
-			// Si la première commande n'est pas BEGIN, connexion refusée
-			if(msgRecv.cmd != GETLIST){
-				printf("Erreur : commande attendu = %d / reçu = %d \n", GETLIST, msgRecv.cmd);
-				continue;
-			}
-
 			printf("\nListe des fichiers du serveur : \n");
 			printf("-------------------------------\n\n");
-			printf("%s", msgRecv.content);
+
+			while(1){
+
+				resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
+
+				if(msgRecv.cmd == ACK_GETLIST){
+					break;
+				}
+				// Si la première commande n'est pas BEGIN, connexion refusée
+				else if(msgRecv.cmd != GETLIST){
+					printf("Erreur : commande attendu = %d / reçu = %d \n", GETLIST, msgRecv.cmd);
+					continue;
+				}
+
+				printf("%s", msgRecv.content);
+			}
 
 		}
 		// #########################################

@@ -163,14 +163,15 @@ int main(int argc, char * argv[]) {
         
         printf("CMD : GETLIST \n");
 
-        // Récupération des informations des fichiers du répertoire de téléchargement
-        listdir(PATH_TO_STORAGE_DIR, m_send.content);
-
-        m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
         m_send.cmd = GETLIST;
+        // Récupération des informations des fichiers du répertoire de téléchargement
+        if(listdir(PATH_TO_STORAGE_DIR, &m_send, fd_circuitV) == 0) break;
+
+        m_send.cmd = ACK_GETLIST;
+        m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd);
 
         // Si le client s'est déconnecté
-        if(msg_send(fd_circuitV, &m_send, SERVEUR) == 0) break;
+    		if(msg_send(fd_circuitV, &m_send, SERVEUR) == 0) break;
 
         printf("GETLIST sent \n");
       }

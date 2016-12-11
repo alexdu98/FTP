@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c
+CFLAGS = -c -std=gnu11 -Wall
 LFLAGS = -Wall
 OBJS_CLIENT = mainC.o client.o commun.o
 OBJS_SERVER = mainS.o serveur.o commun.o 

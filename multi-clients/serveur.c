@@ -115,11 +115,12 @@ void* thread_client (void* args) {
         
       printf("CMD : GETLIST (socket : %d) \n", my_props->fd_circuitV);
 
-      // Récupération des informations des fichiers du répertoire de téléchargement
-      listdir(s_vars->path_to_storage_dir, m_send.content);
-
-      m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + strlen(m_send.content);
       m_send.cmd = GETLIST;
+      // Récupération des informations des fichiers du répertoire de téléchargement
+      if(listdir(s_vars->path_to_storage_dir, &m_send, my_props->fd_circuitV) == 0) break;
+
+      m_send.cmd = ACK_GETLIST;
+      m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd);
 
       // Si le client s'est déconnecté
       if(msg_send(my_props->fd_circuitV, &m_send, SERVEUR) == 0) break;
@@ -343,19 +344,19 @@ void getDl(struct compteur_dl* cpt, unsigned int nbFiles){
   }
 }
 
-// Liste les fichiers du répertoire path_to_dir dans la variable buffer
-void listdir(const char* path_to_dir, char* buffer){
+// Envoit les informations des fichiers du répertoire path_to_dir
+int listdir(const char* path_to_dir, struct msg* msg, int socket){
 
   DIR* dir;
   dir = opendir(path_to_dir);
   if(dir == NULL) {
     perror("opendir listdir ");
   }
-	
+  
   char path_file[512];
   struct dirent* entry;
-
-  strcpy(buffer, "");
+  char temp[512];
+  msg->content[0] = '\0';
 
   while((entry = readdir(dir)) != NULL) {
 
@@ -366,8 +367,31 @@ void listdir(const char* path_to_dir, char* buffer){
     strcat(path_file, "/");
     strcat(path_file, entry->d_name);
 
-    strcat(buffer, lstattoa(path_file, entry->d_name));
+    strcpy(temp, lstattoa(path_file, entry->d_name));
+
+    // Si on peut pas rajouter le fichier actuel car dépassement, on envoit d'abord
+    if(strlen(temp) + strlen(msg->content) >= sizeof(msg->content)){
+      msg->size = sizeof(msg->size) + sizeof(msg->cmd) + strlen(msg->content);
+      // Si le client s'est déconnecté
+      if(msg_send(socket, msg, SERVEUR) == 0) return 0;
+
+      // On écrase les anciennes informations
+      strcpy(msg->content, temp);
+    }
+    else{
+      // On concate dans le buffer du message
+      strcat(msg->content, temp);
+    }
   }
+
+  // Si il y a des informations a envoyer
+  if(strlen(msg->content) > 0){
+    msg->size = sizeof(msg->size) + sizeof(msg->cmd) + strlen(msg->content);
+    // Si le client s'est déconnecté
+    if(msg_send(socket, msg, SERVEUR) == 0) return 0;
+  }
+
+  return 1;
 }
 
 

@@ -33,19 +33,20 @@
 // Taille du buffer d'un message
 #define SIZE_BUFFER_CONTENT 2048
 
-// Identifiant des appelants pour les msg_senc et msg_recv
+// Identifiant des appelants pour les msg_send et msg_recv
 #define SERVEUR 0
 #define CLIENT 1
 
 // Commandes disponibles pour un message
 #define BEGIN 0
 #define GETLIST 1
-#define GET 2
-#define SIZE 3
-#define ERROR 4
-#define ACK_SIZE 5
-#define CONTENT_FILE 6
-#define ACK_CONTENT_FILE 7
+#define ACK_GETLIST 2
+#define GET 3
+#define SIZE 4
+#define ERROR 5
+#define ACK_SIZE 6
+#define CONTENT_FILE 7
+#define ACK_CONTENT_FILE 8
 
 
 // ##################################

@@ -1,6 +1,6 @@
 #include "commun.h"
 
-/* Envoie un message sur une socket
+/* Envoit un message sur une socket
  *
  * @PARAM fd_circuitV, le descripteur de la socket
  * @PARAM m_send, la struct à envoyer
@@ -99,7 +99,7 @@ int msg_recv(int fd_circuitV, struct msg* m_recv, int appelant) {
   // Taille et commande du message reçu, maintenant récéption du contenu
   while(r_total_size < m_recv->size) {
 
-    ret_recv = recv(fd_circuitV, recvPtr + r_total_size, sizeof(*m_recv) - r_total_size, 0);
+    ret_recv = recv(fd_circuitV, recvPtr + r_total_size, m_recv->size - r_total_size, 0);
 
     if(ret_recv < 1){
       
@@ -128,6 +128,6 @@ int msg_recv(int fd_circuitV, struct msg* m_recv, int appelant) {
   if(r_total_size < sizeof(*m_recv))
     m_recv->content[r_total_size - (sizeof(m_recv->size) + sizeof(m_recv->cmd))] = '\0';
   
-  //printf("RECV CONTENT :\n %s \n", m_recv->content);
+  //printf("RECV CONTENT :\n %s \n %d/%d \n", m_recv->content, r_total_size, m_recv->size);
   return r_total_size;
 }

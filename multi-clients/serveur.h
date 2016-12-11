@@ -44,7 +44,7 @@ struct cpt_args {
 // ##################################
 
 char* lstattoa(char* path_to_file, char* name);
-void listdir(const char* path_to_dir, char* chaine);
+int listdir(const char* path_to_dir, struct msg* msg, int socket);
 void* thread_client (void* args);
 int pop_file (int* file, int fin_de_file);
 void* thread_console_serveur(void *args);

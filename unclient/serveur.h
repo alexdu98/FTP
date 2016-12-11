@@ -14,4 +14,4 @@
 // ##################################
 
 char* lstattoa(char* path_to_file, char* name);
-void listdir(const char* path_to_dir, char* chaine);
+int listdir(const char* path_to_dir, struct msg* msg, int socket);
