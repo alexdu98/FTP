@@ -36,3 +36,21 @@ Pour le client :
 - unclient 			: tapez HELP pour voir les commandes disponibles et leurs descriptions
 - multi-clients		: idem que unclient
 - bonus :			: idem que unclient
+
+
+##### EXEMPLES D'UTILISATION DU CLIENT #####
+--------------------------------------------
+HELP 							: affiche les commandes disponibles et leurs descriptions
+
+GETLIST							: affiche les fichiers pouvant être téléchargés du serveur
+
+GET fichier1					: télécharge le fichier fichier1 dans le répertoire courant
+GET fichier1 -DIRL ..			: télécharge le fichier fichier1 dans le répertoire parent
+GET fichier1 fichier2			: télécharge les fichiers fichier1 et fichier2 dans le répertoire courant
+GET fichier1 fichier2 -DIRL ..	: télécharge les fichiers fichier1 et fichier2 dans le répertoire parent
+
+SEND fichier1					: téléverse le fichier fichier1 du répertoire courant sur le serveur
+SEND ../fichier1				: téléverse le fichier fichier1 du répertoire parent sur le serveur
+SEND fichier1 ../fichier2		: téléverse le fichier fichier1 du répertoire courant et le fichier fichier2 du répertoire parent sur le serveur
+
+QUIT							: ferme le programme
