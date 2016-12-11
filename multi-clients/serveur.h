@@ -29,14 +29,14 @@ struct client_args {
 };
 
 struct compteur_dl {
-	char fichier[256];
-	unsigned int nbDl;
+  char fichier [256];
+  unsigned int nbDl;
 };
 
 struct cpt_args {
-	struct compteur_dl* cpt;
-	unsigned int * nbFiles;
-	pthread_mutex_t lock_cpt;
+  struct compteur_dl* cpt;
+  unsigned int * nbFiles;
+  pthread_mutex_t lock_cpt;
 };
 
 // ##################################

@@ -56,7 +56,7 @@
 struct msg {
   unsigned int size; // taille du message entier
   int cmd; // identifiant de la commande à exécuter
-  char content[SIZE_BUFFER_CONTENT]; // contenu du message
+  char content [SIZE_BUFFER_CONTENT]; // contenu du message
 };
 
 

@@ -123,7 +123,7 @@ int main(int argc, char * argv[]) {
   unsigned int nbFiles = countFiles(path_to_storage_dir);
 
   // Alloue un tableau de structure du nombre de fichier pour compter le nombre de téléchargement
-  struct compteur_dl* cpt = (struct compteur_dl*)malloc(sizeof(struct compteur_dl) * nbFiles);
+  struct compteur_dl* cpt = malloc(sizeof(struct compteur_dl) * nbFiles);
 
   // Initialise à 0 le nombre de téléchargement pour chaque fichier
   setCpt(cpt, path_to_storage_dir);

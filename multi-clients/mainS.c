@@ -123,7 +123,7 @@ int main(int argc, char * argv[]) {
   unsigned int nbFiles = countFiles(path_to_storage_dir);
 
   // Alloue un tableau de structure du nombre de fichier pour compter le nombre de téléchargement
-  struct compteur_dl* cpt = (struct compteur_dl*)malloc(sizeof(struct compteur_dl) * nbFiles);
+  struct compteur_dl* cpt = malloc(sizeof(struct compteur_dl) * nbFiles);
 
   // Initialise à 0 le nombre de téléchargement pour chaque fichier
   setCpt(cpt, path_to_storage_dir);
@@ -139,7 +139,7 @@ int main(int argc, char * argv[]) {
   s_vars.cpt = &cpt_args;
 
   // Création du thread pour lire la console serveur et afficher le nombre de téléchargement
-  pthread_create(&console, NULL, &thread_console_serveur, (void*)&cpt_args);
+  pthread_create(&console, NULL, &thread_console_serveur, (void*) &cpt_args);
 
   // ################################################
   // ##########   BOUCLE LANCEMENT CLIENT   #########
@@ -155,13 +155,13 @@ int main(int argc, char * argv[]) {
       printf("En attente d'un client...\n");
 
       // Acceptation d'une connexion de client
-      fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) & brCv, & lgbrCv);
+      fd_circuitV = accept(fd_brPublique, (struct sockaddr * ) &brCv, &lgbrCv);
       if (fd_circuitV == -1) {
 	       perror("accept ");
       }
       else { // Traitement normal du client
 
-      	// Operation en ecriture sur la var partagee nb de clients, var a proteger
+      	// Operation en ecriture sur la var partagee, section critique
       	ret_m_lock = pthread_mutex_lock(&(s_vars.lock));
       	if(ret_m_lock != 0)
       	  perror("mutex lock nb clients inc ");

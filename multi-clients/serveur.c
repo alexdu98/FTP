@@ -67,11 +67,14 @@ void* thread_client (void* args) {
   struct msg m_send;
   struct msg m_recv;
 
+  // Retour mutex_lock
+  int ret_m_lock = 0, ret_m_unlock = 0;
+
   // Retour du send
   int resSend;
 
   // Fichier rendu par fopen
-  FILE* fichier;
+  FILE* fichier = NULL;
 
   // Chemin et nom du fichier à ouvrir
   char cheminFichier[255];
@@ -116,6 +119,7 @@ void* thread_client (void* args) {
       printf("CMD : GETLIST (socket : %d) \n", my_props->fd_circuitV);
 
       m_send.cmd = GETLIST;
+      
       // Récupération des informations des fichiers du répertoire de téléchargement
       if(listdir(s_vars->path_to_storage_dir, &m_send, my_props->fd_circuitV) == 0) break;
 
@@ -141,20 +145,24 @@ void* thread_client (void* args) {
       strcpy(cheminFichier, s_vars->path_to_storage_dir);
       strcat(cheminFichier, m_recv.content);
 
-      fichier = NULL;
-
-      // Si on ne peut pas accéder au fichier on envoit l'erreur
+      // Si on ne peut pas accéder au fichier on envoie l'erreur
       if((fichier = fopen(cheminFichier, "rb")) == NULL){
       	m_send.cmd = ERROR;
       	strcpy(m_send.content, m_recv.content);
       	strcat(m_send.content, " -> ");
       	strcat(m_send.content, strerror(errno));
       }
-      // S'il n'y a pas d'erreur on envoit la taille du fichier
+      // S'il n'y a pas d'erreur on envoie la taille du fichier
       else{
       	m_send.cmd = SIZE;
-      	fseek(fichier, 0, SEEK_END);
-      	tailleFichier = ftell(fichier);
+	
+      	if(fseek(fichier, 0, SEEK_END) == -1)
+	  perror("fseek, size of the file");
+
+	tailleFichier = ftell(fichier);
+	if(tailleFichier == -1)
+	  perror("ftell, size of the file ");
+	
       	sprintf(m_send.content, "%u", tailleFichier);
       }
 
@@ -185,14 +193,14 @@ void* thread_client (void* args) {
 
       	// Place le curseur pour la prochaine lecture
       	if(fseek(fichier, offsetFseek, SEEK_SET) == -1){
-      	  perror("Erreur fseek ");
+      	  perror("Erreur fseek during file sending ");
       	  break;
       	}
 
       	// Lecture du fichier
       	resfr = fread(m_send.content, 1, sizeof(m_send.content), fichier);
 
-      	// On envoit la taille que l'on a lu
+      	// On envoie la taille que l'on a lu
       	m_send.size = sizeof(m_send.size) + sizeof(m_send.cmd) + resfr;
 
       	resSend = msg_send(my_props->fd_circuitV, &m_send, SERVEUR);
@@ -214,7 +222,7 @@ void* thread_client (void* args) {
 
       // Si le client s'était déconnecté
       if(connecte == 0) break;
-
+      
       // Si le client s'est déconnecté
       if(msg_recv(my_props->fd_circuitV, &m_recv, SERVEUR) == 0) break;
 
@@ -225,11 +233,15 @@ void* thread_client (void* args) {
       }
 
       // Il ne faut pas que les threads essayent de lire/écrire en même temps sur le nombre de téléchargement d'un fichier
-      pthread_mutex_lock(&((s_vars->cpt)->lock_cpt));
+      ret_m_lock = pthread_mutex_lock(&((s_vars->cpt)->lock_cpt));
+      if(ret_m_lock != 0)
+	perror("mutex lock inc cpt dl ");
 
       addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles);
 
-      pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
+      ret_m_unlock = pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
+      if(ret_m_unlock != 0)
+	perror("mutex unlock inc cpt dl ");
 
       printf("Le fichier %s a bien ete transmis. (socket : %d)\n", nomFichier, my_props->fd_circuitV);
 
@@ -237,17 +249,17 @@ void* thread_client (void* args) {
     // #########################################
     // ############   CMD INCONNUE   ###########
     // #########################################
-    else{
-
+    else {
+      
       printf("Commande inconnue (socket : %d) \n", my_props->fd_circuitV);
 
     }
   }
 
   // Operation en ecriture sur la var partagee nb de clients, var a proteger
-  int ret_m_lock = pthread_mutex_lock(&(s_vars->lock));
+  ret_m_lock = pthread_mutex_lock(&(s_vars->lock));
   if(ret_m_lock != 0)
-    perror("mutex lock nb clients inc ");
+    perror("mutex lock deconnexion du client ");
 
   // Diminue le nb de clients apres deconnexion
   s_vars->nb_clients--;
@@ -258,9 +270,9 @@ void* thread_client (void* args) {
 
   printf("Un client vient de se deconnecter. (socket : %d) \n", my_props->fd_circuitV);
 
-  int ret_m_unlock = pthread_mutex_unlock(&(s_vars->lock));
+  ret_m_unlock = pthread_mutex_unlock(&(s_vars->lock));
   if(ret_m_unlock != 0)
-    perror("mutex unlock nb clients inc ");
+    perror("mutex unlock deconnexion du client ");
 
   pthread_exit(NULL);
 }
@@ -301,6 +313,7 @@ void setCpt(struct compteur_dl* cpt, const char* path_to_dir){
   while((entry = readdir(dir)) != NULL) {
     if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
       continue;
+    
     strcpy(cpt[i].fichier, entry->d_name);
     cpt[i].nbDl = 0;
     i++;
@@ -309,7 +322,8 @@ void setCpt(struct compteur_dl* cpt, const char* path_to_dir){
 
 // Ajoute un téléchargement pour le fichier file, s'il non présent dans le tableau, ajout
 void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
-  for (int i = 0; i < *nbFiles; ++i){
+
+  for (int i = 0; i < *nbFiles; ++i) {
     if(strcmp(cpt[i].fichier, file) == 0){
       cpt[i].nbDl++;
       return;
@@ -317,7 +331,7 @@ void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
   }
 
   // Le fichier n'était pas encore dans la liste (ajouté après le lancement du serveur)
-  struct compteur_dl* temp = (struct compteur_dl*)realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
+  struct compteur_dl* temp = realloc(cpt, sizeof(*cpt) + sizeof(struct compteur_dl));
 
   // Remplace le pointeur de la scruture
   *cpt = *temp;
