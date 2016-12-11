@@ -325,6 +325,9 @@ int main(int argc, char **argv){
 				}
 
 				offsetFseek = 0;
+				clock_t start, end;
+				float time;
+			  start = clock();
 				while(offsetFseek < tailleFichier){
 
 					resRecv = msg_recv(localSocket, &msgRecv, CLIENT);
@@ -349,6 +352,14 @@ int main(int argc, char **argv){
 					
 					// Decale l'offset
 					offsetFseek += resFwrite;
+
+					end = clock();
+				  time = 1000 * (float)(end - start) / CLOCKS_PER_SEC;
+				  if(time > 1.0 || offsetFseek >= tailleFichier){  
+				  	start = clock();
+				  	printf("\rFichier telecharge a %0.1f%%", ((float)offsetFseek / tailleFichier) * 100);
+				  	fflush(stdout);
+					}
 				}
 
 				if(fclose(fichier) == EOF){
@@ -362,7 +373,7 @@ int main(int argc, char **argv){
 
 				msg_send(localSocket, &msgSend, CLIENT);
 
-				printf("Le fichier %s a bien ete telecharge \n", file);
+				printf("\nLe fichier %s a bien ete telecharge \n", file);
 
 				// Passe au fichier suivant
 				file = strtok(NULL, " ");
