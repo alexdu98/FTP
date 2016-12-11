@@ -45,7 +45,10 @@ int main(int argc, char **argv){
 	unsigned int tailleFichier;
 
 	// Chemin et nom du fichier à créer
-	char pathToOpen[255];
+	char pathToOpen[256];
+
+	// Nouveau nom pour le fichier téléchargé
+	char newName[256];
 
 	// Fichier rendu par fopen
 	FILE* fichier;
@@ -285,6 +288,31 @@ int main(int argc, char **argv){
 
         // On concatene le nom du fichier
         strcat(pathToOpen, file);
+
+        // On test l'existence du fichier, si existe on propose de renommer
+        while(access(pathToOpen, F_OK) != -1){
+
+        	printf("Un fichier portant ce nom existe deja dans le repertoire de destination\n");
+        	printf("Entrez un nouveau nom ou appuyez sur entree pour ecraser le contenu\n");
+        	printf("Nom du nouveau fichier [] : ");
+
+        	// Demande au client de rentrer une commande
+					fgets(newName, sizeof(newName), stdin);
+
+					printf("\n");
+
+					// Vide => ecrase le contenu
+					if(newName[0] == '\n'){
+						break;
+					}
+
+					// Supprime le saut de ligne
+					newName[strlen(newName) - 1] = '\0';
+
+					// Modifie le nom du nouveau fichier
+					strcpy(pathToOpen, DIRLocal);
+					strcat(pathToOpen, newName);
+        }
 
 				fichier = NULL;
 		
