@@ -381,7 +381,12 @@ int listdir(const char* path_to_dir, struct msg* msg, int socket){
     strcat(path_file, "/");
     strcat(path_file, entry->d_name);
 
-    strcpy(temp, lstattoa(path_file, entry->d_name));
+    // Que les noms de fichiers
+    char * resLstat = lstattoa(path_file, entry->d_name);
+    if(resLstat == NULL)
+      continue;
+
+    strcpy(temp, resLstat);
 
     // Si on peut pas rajouter le fichier actuel car dépassement, on envoit d'abord
     if(strlen(temp) + strlen(msg->content) >= sizeof(msg->content)){
@@ -423,9 +428,10 @@ char* lstattoa(char* path_to_file, char* name){
   }
 
   // Type du fichier (d, - ou l)
-  if(S_ISREG(file.st_mode)) strcpy(file_infos, "-");
-  else if(S_ISDIR(file.st_mode)) strcpy(file_infos, "d");
-  else if(S_ISLNK(file.st_mode)) strcpy(file_infos, "l");
+  if(!S_ISREG(file.st_mode)) 
+    return NULL;
+
+  strcpy(file_infos, "-");
 	
 
   // Permissions du fichier pour l'utilisateur
