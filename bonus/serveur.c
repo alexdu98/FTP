@@ -236,7 +236,7 @@ void* thread_client (void* args) {
       // Il ne faut pas que les threads essayent de lire/écrire en même temps sur le nombre de téléchargement d'un fichier
       pthread_mutex_lock(&((s_vars->cpt)->lock_cpt));
 
-      addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles, 1);
+      (s_vars->cpt)->cpt = addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles, 1);
 
       pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
 
@@ -348,7 +348,7 @@ void* thread_client (void* args) {
       // Il ne faut pas que les threads essayent de lire/écrire en même temps sur le nombre de téléchargement d'un fichier
       pthread_mutex_lock(&((s_vars->cpt)->lock_cpt));
 
-      addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles, 0);
+      (s_vars->cpt)->cpt = addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles, 0);
 
       pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
 
@@ -429,22 +429,23 @@ void setCpt(struct compteur_dl* cpt, const char* path_to_dir){
 }
 
 // Ajoute un téléchargement pour le fichier file, s'il non présent dans le tableau, ajout
-void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles, int value){
-  for (int i = 0; i < *nbFiles; ++i){
+void* addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles, int value){
+
+  for (int i = 0; i < *nbFiles; i++){
     if(strcmp(cpt[i].fichier, file) == 0){
       if(value != 0)
-        cpt[i].nbDl++;
+        (cpt[i].nbDl)++;
       else // Si jamais le fichier a ete delete, puis retéléversé
         cpt[i].nbDl = 0;
-      return;
+      return cpt;
     }
   }
 
   // Le fichier n'était pas encore dans la liste (ajouté après le lancement du serveur)
-  cpt = realloc(cpt, sizeof(*cpt) + sizeof(struct compteur_dl));
+  struct compteur_dl* temp = realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
 
   // Remplace le pointeur de la scruture
-  /* *cpt = *temp; */
+  cpt = temp;
 
   // Ajoute le nom du fichier et le nombre de téléchargement
   strcpy(cpt[*nbFiles].fichier, file);
@@ -452,6 +453,8 @@ void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles, int valu
 
   // Incrémente le nombre de fichier
   (*nbFiles)++;
+
+  return cpt;
 }
 
 // Affiche le nombre de téléchargement pour chaque fichier

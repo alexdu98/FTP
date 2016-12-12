@@ -237,7 +237,7 @@ void* thread_client (void* args) {
       if(ret_m_lock != 0)
 	perror("mutex lock inc cpt dl ");
 
-      addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles);
+      (s_vars->cpt)->cpt = addCpt((s_vars->cpt)->cpt, nomFichier, (s_vars->cpt)->nbFiles);
 
       ret_m_unlock = pthread_mutex_unlock(&((s_vars->cpt)->lock_cpt));
       if(ret_m_unlock != 0)
@@ -321,20 +321,20 @@ void setCpt(struct compteur_dl* cpt, const char* path_to_dir){
 }
 
 // Ajoute un téléchargement pour le fichier file, s'il non présent dans le tableau, ajout
-void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
+void* addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
 
-  for (int i = 0; i < *nbFiles; ++i) {
+  for (int i = 0; i < *nbFiles; i++) {
     if(strcmp(cpt[i].fichier, file) == 0){
-      cpt[i].nbDl++;
-      return;
+      (cpt[i].nbDl)++;
+      return cpt;
     }
   }
 
   // Le fichier n'était pas encore dans la liste (ajouté après le lancement du serveur)
-  struct compteur_dl* temp = realloc(cpt, sizeof(*cpt) + sizeof(struct compteur_dl));
+  struct compteur_dl* temp = realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
 
   // Remplace le pointeur de la scruture
-  *cpt = *temp;
+  cpt = temp;
 
   // Ajoute le nom du fichier et le nombre de téléchargement
   strcpy(cpt[*nbFiles].fichier, file);
@@ -342,6 +342,8 @@ void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles){
 
   // Incrémente le nombre de fichier
   (*nbFiles)++;
+
+  return cpt;
 }
 
 // Affiche le nombre de téléchargement pour chaque fichier

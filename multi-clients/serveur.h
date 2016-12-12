@@ -50,5 +50,5 @@ int pop_file (int* file, int fin_de_file);
 void* thread_console_serveur(void *args);
 unsigned int countFiles(const char* path_to_dir);
 void setCpt(struct compteur_dl* cpt, const char* path_to_dir);
-void addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles);
+void* addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles);
 void getDl(struct compteur_dl* cpt, unsigned int nbFiles);
