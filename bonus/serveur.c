@@ -442,10 +442,7 @@ void* addCpt(struct compteur_dl* cpt, char* file, unsigned int *nbFiles, int val
   }
 
   // Le fichier n'était pas encore dans la liste (ajouté après le lancement du serveur)
-  struct compteur_dl* temp = realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
-
-  // Remplace le pointeur de la scruture
-  cpt = temp;
+  cpt = realloc(cpt, sizeof(struct compteur_dl) * (*nbFiles + 1));
 
   // Ajoute le nom du fichier et le nombre de téléchargement
   strcpy(cpt[*nbFiles].fichier, file);
